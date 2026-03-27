@@ -1,0 +1,45 @@
+name: Lint PR title
+
+# Enforces Conventional Commits on PR titles.
+# Since we use squash merges, the PR title becomes the single commit
+# message on main — keeping the history clean and release-please accurate.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  commitlint:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title follows Conventional Commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            revert
+            test
+            docs
+            build
+            ci
+            chore
+            style
+          # Allow breaking change indicator in PR title
+          # e.g. "feat!: remove deprecated endpoint"
+          requireScope: false
+          disallowScopes: |
+            release
