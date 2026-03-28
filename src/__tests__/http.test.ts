@@ -10,11 +10,7 @@ import { apiRequest } from "../http.js";
 const BASE = "https://api.hyperserve.io";
 const API_KEY = "hs_test_key";
 
-function makeFetchResponse(
-	status: number,
-	body?: unknown,
-	ok?: boolean,
-): Response {
+function makeFetchResponse(status: number, body?: unknown, ok?: boolean): Response {
 	return {
 		ok: ok ?? (status >= 200 && status < 300),
 		status,
@@ -33,11 +29,14 @@ describe("apiRequest", () => {
 	});
 
 	it("sends X-API-KEY header", async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			makeFetchResponse(200, { id: "abc" }),
-		);
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(200, { id: "abc" }));
 
-		await apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 5000 });
+		await apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: API_KEY,
+			timeoutMs: 5000,
+		});
 
 		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		expect((init.headers as Record<string, string>)["X-API-KEY"]).toBe(API_KEY);
@@ -61,7 +60,12 @@ describe("apiRequest", () => {
 	it("does not set Content-Type when there is no body", async () => {
 		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(200, { id: "abc" }));
 
-		await apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 5000 });
+		await apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: API_KEY,
+			timeoutMs: 5000,
+		});
 
 		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
@@ -71,7 +75,13 @@ describe("apiRequest", () => {
 		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(201, {}));
 
 		const body = { filename: "clip.mp4", fileSizeBytes: 1024 };
-		await apiRequest({ method: "POST", url: `${BASE}/api/video`, apiKey: API_KEY, timeoutMs: 5000, body });
+		await apiRequest({
+			method: "POST",
+			url: `${BASE}/api/video`,
+			apiKey: API_KEY,
+			timeoutMs: 5000,
+			body,
+		});
 
 		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		expect(init.body).toBe(JSON.stringify(body));
@@ -111,7 +121,12 @@ describe("apiRequest", () => {
 		);
 
 		await expect(
-			apiRequest({ method: "GET", url: `${BASE}/api/video/missing/public`, apiKey: API_KEY, timeoutMs: 5000 }),
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/missing/public`,
+				apiKey: API_KEY,
+				timeoutMs: 5000,
+			}),
 		).rejects.toBeInstanceOf(HyperserveNotFoundError);
 	});
 
@@ -150,12 +165,15 @@ describe("apiRequest", () => {
 	});
 
 	it("throws HyperserveValidationError on 403", async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			makeFetchResponse(403, { message: "Forbidden" }, false),
-		);
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(403, { message: "Forbidden" }, false));
 
 		await expect(
-			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 5000 }),
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/1/public`,
+				apiKey: API_KEY,
+				timeoutMs: 5000,
+			}),
 		).rejects.toBeInstanceOf(HyperserveValidationError);
 	});
 
@@ -165,7 +183,13 @@ describe("apiRequest", () => {
 		);
 
 		await expect(
-			apiRequest({ method: "POST", url: `${BASE}/api/video`, apiKey: API_KEY, timeoutMs: 5000, body: {} }),
+			apiRequest({
+				method: "POST",
+				url: `${BASE}/api/video`,
+				apiKey: API_KEY,
+				timeoutMs: 5000,
+				body: {},
+			}),
 		).rejects.toBeInstanceOf(HyperserveValidationError);
 	});
 
@@ -193,7 +217,12 @@ describe("apiRequest", () => {
 		});
 
 		await expect(
-			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 100 }),
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/1/public`,
+				apiKey: API_KEY,
+				timeoutMs: 100,
+			}),
 		).rejects.toBeInstanceOf(HyperserveTimeoutError);
 	});
 
@@ -201,7 +230,12 @@ describe("apiRequest", () => {
 		vi.mocked(fetch).mockRejectedValue(new TypeError("Failed to fetch"));
 
 		await expect(
-			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 5000 }),
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/1/public`,
+				apiKey: API_KEY,
+				timeoutMs: 5000,
+			}),
 		).rejects.toBeInstanceOf(TypeError);
 	});
 
@@ -234,7 +268,12 @@ describe("apiRequest — retries", () => {
 		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(500, { message: "Server error" }, false));
 
 		await expect(
-			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 30_000 }),
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/1/public`,
+				apiKey: API_KEY,
+				timeoutMs: 30_000,
+			}),
 		).rejects.toBeInstanceOf(HyperserveApiError);
 
 		expect(fetch).toHaveBeenCalledTimes(1);
@@ -296,9 +335,7 @@ describe("apiRequest — retries", () => {
 	});
 
 	it("does not retry on 4xx validation errors", async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			makeFetchResponse(400, { message: "Bad request" }, false),
-		);
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(400, { message: "Bad request" }, false));
 
 		await expect(
 			apiRequest({
@@ -315,9 +352,7 @@ describe("apiRequest — retries", () => {
 	});
 
 	it("does not retry on 404", async () => {
-		vi.mocked(fetch).mockResolvedValue(
-			makeFetchResponse(404, { message: "Not found" }, false),
-		);
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(404, { message: "Not found" }, false));
 
 		await expect(
 			apiRequest({

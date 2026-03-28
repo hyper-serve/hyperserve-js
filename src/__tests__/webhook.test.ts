@@ -66,23 +66,21 @@ describe("verifyWebhookSignature", () => {
 		const signature = await generateSignature(timestampMs, SECRET);
 
 		// 30-second tolerance — 1 minute old should fail
-		expect(
-			await verifyWebhookSignature({ signature, secret: SECRET, toleranceMs: 30_000 }),
-		).toBe(false);
+		expect(await verifyWebhookSignature({ signature, secret: SECRET, toleranceMs: 30_000 })).toBe(
+			false,
+		);
 
 		// 2-minute tolerance — 1 minute old should pass
-		expect(
-			await verifyWebhookSignature({ signature, secret: SECRET, toleranceMs: 120_000 }),
-		).toBe(true);
+		expect(await verifyWebhookSignature({ signature, secret: SECRET, toleranceMs: 120_000 })).toBe(
+			true,
+		);
 	});
 
 	it("returns false for a wrong secret", async () => {
 		vi.setSystemTime(1_000_000);
 		const signature = await generateSignature(1_000_000, SECRET);
 
-		expect(
-			await verifyWebhookSignature({ signature, secret: "wrong-secret" }),
-		).toBe(false);
+		expect(await verifyWebhookSignature({ signature, secret: "wrong-secret" })).toBe(false);
 	});
 
 	it("returns false when the signature hex is tampered with", async () => {
@@ -110,9 +108,7 @@ describe("verifyWebhookSignature", () => {
 	});
 
 	it("returns false when the timestamp portion is not a number", async () => {
-		expect(
-			await verifyWebhookSignature({ signature: "abc.deadbeef", secret: SECRET }),
-		).toBe(false);
+		expect(await verifyWebhookSignature({ signature: "abc.deadbeef", secret: SECRET })).toBe(false);
 	});
 
 	it("returns false for a future timestamp beyond the tolerance window", async () => {

@@ -57,7 +57,10 @@ describe("putVideoToStorage (react-native)", () => {
 
 	it("resolves on successful upload", async () => {
 		vi.mocked(fetch)
-			.mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(makeBlob()) } as unknown as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				blob: () => Promise.resolve(makeBlob()),
+			} as unknown as Response)
 			.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
 
 		await expect(
@@ -67,7 +70,10 @@ describe("putVideoToStorage (react-native)", () => {
 
 	it("throws HyperserveUploadError when the storage PUT fails", async () => {
 		vi.mocked(fetch)
-			.mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(makeBlob()) } as unknown as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				blob: () => Promise.resolve(makeBlob()),
+			} as unknown as Response)
 			.mockResolvedValueOnce({ ok: false, status: 403 } as Response);
 
 		await expect(
@@ -120,7 +126,10 @@ describe("putVideoToStorage (react-native) — onProgress via XHR", () => {
 				this.listeners.get("load")?.();
 			},
 			triggerUploadProgress(loaded: number, total: number) {
-				for (const [event, cb] of this.upload.addEventListener.mock.calls as [string, (e: ProgressEvent) => void][]) {
+				for (const [event, cb] of this.upload.addEventListener.mock.calls as [
+					string,
+					(e: ProgressEvent) => void,
+				][]) {
 					if (event === "progress") {
 						cb({ lengthComputable: true, loaded, total } as ProgressEvent);
 					}

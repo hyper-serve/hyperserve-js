@@ -278,14 +278,16 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 	it("orchestrates createVideo → storage PUT → completeUpload", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(createVideoResponse),
 			} as unknown as Response)
 			// Storage PUT
 			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
 			// completeUpload
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(completeUploadResponse),
 			} as unknown as Response);
 
@@ -303,12 +305,14 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 	it("sends the storage PUT to the uploadUrl from createVideo", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(createVideoResponse),
 			} as unknown as Response)
 			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(completeUploadResponse),
 			} as unknown as Response);
 
@@ -330,17 +334,24 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 	it("infers fileSizeBytes from Buffer when not provided", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(createVideoResponse),
 			} as unknown as Response)
 			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(completeUploadResponse),
 			} as unknown as Response);
 
 		const buf = Buffer.from("video data");
-		await makeClient().uploadVideo({ file: buf, filename: "clip.mp4", resolutions: ["1080p"], isPublic: true });
+		await makeClient().uploadVideo({
+			file: buf,
+			filename: "clip.mp4",
+			resolutions: ["1080p"],
+			isPublic: true,
+		});
 
 		const [, createInit] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		const createBody = JSON.parse(createInit.body as string);
@@ -349,7 +360,9 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 
 	it("throws if createVideo fails", async () => {
 		vi.mocked(fetch).mockResolvedValueOnce({
-			ok: false, status: 400, statusText: "400",
+			ok: false,
+			status: 400,
+			statusText: "400",
 			json: () => Promise.resolve({ message: "bad request" }),
 		} as unknown as Response);
 
@@ -369,7 +382,8 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 	it("throws HyperserveUploadError if storage PUT fails", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(createVideoResponse),
 			} as unknown as Response)
 			// Storage PUT fails
@@ -391,12 +405,15 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 	it("throws if completeUpload fails", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
-				ok: true, status: 201,
+				ok: true,
+				status: 201,
 				json: () => Promise.resolve(createVideoResponse),
 			} as unknown as Response)
 			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
 			.mockResolvedValueOnce({
-				ok: false, status: 400, statusText: "400",
+				ok: false,
+				status: 400,
+				statusText: "400",
 				json: () => Promise.resolve({ message: "file not in storage" }),
 			} as unknown as Response);
 
