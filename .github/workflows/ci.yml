@@ -26,13 +26,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Format
-        run: npm run format
-
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint
+      - name: Check
         run: npm run check
 
       - name: Test

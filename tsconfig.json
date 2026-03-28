@@ -3,6 +3,8 @@
     "target": "ES2020",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    // Suppresses the TypeScript 6.0 deprecation of "module"/"moduleResolution": "NodeNext".
+    // The replacement names haven't stabilised across tooling yet; remove once they have.
     "ignoreDeprecations": "6.0",
     "lib": ["ES2020", "DOM"],
     "types": ["node"],

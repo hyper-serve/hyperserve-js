@@ -26,7 +26,10 @@ export function normalizeFile(
 		return { body: file, size: fileSizeBytes };
 	}
 
-	// Node.js Buffer
+	// Node.js Buffer. `Buffer` is a Node global; all explicitly supported edge runtimes
+	// (Cloudflare Workers, Vercel Edge) ship a Buffer compatibility layer, so this is safe
+	// for the stated server targets. Pure browser or RN bundles never reach this branch
+	// because normalize.ts is not imported by the browser or react-native entry points.
 	if (Buffer.isBuffer(file)) {
 		const size = fileSizeBytes ?? file.byteLength;
 		// Wrap in a Blob so fetch/XHR handle it uniformly

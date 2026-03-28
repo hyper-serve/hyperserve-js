@@ -105,6 +105,7 @@ const result = await hyperserve.completeUpload(videoId);
 | `apiKey` | `string` | Yes | — | Your Hyperserve API key |
 | `baseUrl` | `string` | No | `https://api.hyperserve.io` | Override for local dev |
 | `timeoutMs` | `number` | No | `30000` | Timeout for API calls |
+| `retries` | `number` | No | `0` | Retry attempts on 5xx responses and network errors. Uses exponential backoff with full jitter. Does not retry on 4xx or timeouts. |
 
 ---
 
@@ -202,6 +203,28 @@ const result = await hyperserve.uploadVideo({
 
 ---
 
+### `verifyWebhookSignature(options)`
+
+Verifies the `x-hyperserve-signature` header on incoming webhook requests. Returns `Promise<boolean>` — never throws.
+
+```typescript
+import { verifyWebhookSignature } from 'hyperserve-sdk';
+
+const isValid = await verifyWebhookSignature({
+  signature: req.headers['x-hyperserve-signature'] ?? '',
+  secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+});
+if (!isValid) return res.status(401).end();
+```
+
+| Option | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `signature` | `string` | Yes | — | Value of the `x-hyperserve-signature` header |
+| `secret` | `string` | Yes | — | Webhook signing secret from the Hyperserve dashboard |
+| `toleranceMs` | `number` | No | `300000` | Max timestamp age in ms (default 5 min) |
+
+---
+
 ## Error handling
 
 All errors extend `HyperserveError` and can be caught broadly or narrowly.
@@ -240,13 +263,16 @@ try {
 
 ```typescript
 import type {
-  VideoResolution,     // '144p' | '240p' | '360p' | '480p' | '720p' | '1080p' | '1440p' | '4k' | '8k'
-  VideoStatus,         // 'pending_upload' | 'processing' | 'ready' | 'fail'
+  VideoResolution,             // '144p' | '240p' | '360p' | '480p' | '720p' | '1080p' | '1440p' | '4k' | '8k'
+  VideoStatus,                 // 'pending_upload' | 'processing' | 'ready' | 'fail'
   CreateVideoOptions,
   CreateVideoResult,
   CompleteUploadResult,
   VideoResult,
   VideoResolutionResult,
+  VerifyWebhookSignatureOptions,
+  PutVideoToStorageOptions,    // for hyperserve-sdk/browser
+  PutVideoToStorageRNOptions,  // for hyperserve-sdk/react-native
 } from 'hyperserve-sdk';
 ```
 

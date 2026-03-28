@@ -82,6 +82,14 @@ describe("putVideoToStorage (react-native)", () => {
 			putVideoToStorage({ uploadUrl: UPLOAD_URL, contentType: CONTENT_TYPE, uri: LOCAL_URI }),
 		).rejects.toBeInstanceOf(TypeError);
 	});
+
+	it("throws HyperserveUploadError when the local URI fetch resolves with ok: false", async () => {
+		vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 0 } as unknown as Response);
+
+		await expect(
+			putVideoToStorage({ uploadUrl: UPLOAD_URL, contentType: CONTENT_TYPE, uri: LOCAL_URI }),
+		).rejects.toBeInstanceOf(HyperserveUploadError);
+	});
 });
 
 describe("putVideoToStorage (react-native) — onProgress via XHR", () => {

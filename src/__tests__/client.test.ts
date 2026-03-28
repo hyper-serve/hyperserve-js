@@ -204,6 +204,15 @@ describe("HyperserveClient — getVideo", () => {
 		expect(url).toBe(`${BASE}/api/video/video-uuid/private/7200`);
 	});
 
+	it("GETs the public endpoint when private: false is explicitly passed", async () => {
+		mockFetch(200, publicVideoResponse);
+
+		await makeClient().getVideo("video-uuid", { private: false });
+
+		const [url] = vi.mocked(fetch).mock.calls[0] as [string];
+		expect(url).toBe(`${BASE}/api/video/video-uuid/public`);
+	});
+
 	it("throws HyperserveNotFoundError on 404", async () => {
 		mockFetch(404, { message: "Video not found" }, false);
 

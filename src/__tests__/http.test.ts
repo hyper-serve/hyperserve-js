@@ -133,6 +133,32 @@ describe("apiRequest", () => {
 		expect((err as HyperserveValidationError).message).toBe("Unsupported file extension");
 	});
 
+	it("throws HyperserveValidationError on 401", async () => {
+		vi.mocked(fetch).mockResolvedValue(
+			makeFetchResponse(401, { message: "Invalid API key" }, false),
+		);
+
+		const err = await apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: "bad_key",
+			timeoutMs: 5000,
+		}).catch((e: unknown) => e);
+
+		expect(err).toBeInstanceOf(HyperserveValidationError);
+		expect((err as HyperserveValidationError).statusCode).toBe(401);
+	});
+
+	it("throws HyperserveValidationError on 403", async () => {
+		vi.mocked(fetch).mockResolvedValue(
+			makeFetchResponse(403, { message: "Forbidden" }, false),
+		);
+
+		await expect(
+			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 5000 }),
+		).rejects.toBeInstanceOf(HyperserveValidationError);
+	});
+
 	it("throws HyperserveValidationError on 422", async () => {
 		vi.mocked(fetch).mockResolvedValue(
 			makeFetchResponse(422, { message: "Validation failed" }, false),
@@ -190,5 +216,139 @@ describe("apiRequest", () => {
 		}).catch((e: unknown) => e);
 
 		expect((err as HyperserveApiError).message).toBe("503");
+	});
+});
+
+describe("apiRequest — retries", () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn());
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.useRealTimers();
+	});
+
+	it("does not retry by default (retries: 0)", async () => {
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(500, { message: "Server error" }, false));
+
+		await expect(
+			apiRequest({ method: "GET", url: `${BASE}/api/video/1/public`, apiKey: API_KEY, timeoutMs: 30_000 }),
+		).rejects.toBeInstanceOf(HyperserveApiError);
+
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("retries on 5xx and succeeds on the second attempt", async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce(makeFetchResponse(500, { message: "Server error" }, false))
+			.mockResolvedValueOnce(makeFetchResponse(200, { id: "abc" }));
+
+		const promise = apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: API_KEY,
+			timeoutMs: 30_000,
+			retries: 1,
+		});
+
+		await vi.runAllTimersAsync();
+		expect(await promise).toEqual({ id: "abc" });
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries on network errors and succeeds", async () => {
+		vi.mocked(fetch)
+			.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+			.mockResolvedValueOnce(makeFetchResponse(200, { id: "abc" }));
+
+		const promise = apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: API_KEY,
+			timeoutMs: 30_000,
+			retries: 1,
+		});
+
+		await vi.runAllTimersAsync();
+		expect(await promise).toEqual({ id: "abc" });
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
+
+	it("exhausts all retries and throws the last error", async () => {
+		vi.mocked(fetch).mockResolvedValue(makeFetchResponse(500, { message: "Server error" }, false));
+
+		const promise = apiRequest({
+			method: "GET",
+			url: `${BASE}/api/video/1/public`,
+			apiKey: API_KEY,
+			timeoutMs: 30_000,
+			retries: 2,
+		});
+
+		// Attach the rejection handler before advancing timers to avoid unhandled rejection warnings
+		const assertion = expect(promise).rejects.toBeInstanceOf(HyperserveApiError);
+		await vi.runAllTimersAsync();
+		await assertion;
+		// 1 original + 2 retries
+		expect(fetch).toHaveBeenCalledTimes(3);
+	});
+
+	it("does not retry on 4xx validation errors", async () => {
+		vi.mocked(fetch).mockResolvedValue(
+			makeFetchResponse(400, { message: "Bad request" }, false),
+		);
+
+		await expect(
+			apiRequest({
+				method: "POST",
+				url: `${BASE}/api/video`,
+				apiKey: API_KEY,
+				timeoutMs: 30_000,
+				retries: 3,
+				body: {},
+			}),
+		).rejects.toBeInstanceOf(HyperserveValidationError);
+
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not retry on 404", async () => {
+		vi.mocked(fetch).mockResolvedValue(
+			makeFetchResponse(404, { message: "Not found" }, false),
+		);
+
+		await expect(
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/missing/public`,
+				apiKey: API_KEY,
+				timeoutMs: 30_000,
+				retries: 3,
+			}),
+		).rejects.toBeInstanceOf(HyperserveNotFoundError);
+
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not retry on timeout", async () => {
+		vi.mocked(fetch).mockImplementation(() => {
+			const err = new Error("The operation was aborted");
+			err.name = "AbortError";
+			return Promise.reject(err);
+		});
+
+		await expect(
+			apiRequest({
+				method: "GET",
+				url: `${BASE}/api/video/1/public`,
+				apiKey: API_KEY,
+				timeoutMs: 30_000,
+				retries: 3,
+			}),
+		).rejects.toBeInstanceOf(HyperserveTimeoutError);
+
+		expect(fetch).toHaveBeenCalledTimes(1);
 	});
 });

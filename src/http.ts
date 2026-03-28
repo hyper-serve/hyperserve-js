@@ -1,5 +1,6 @@
 import {
 	HyperserveApiError,
+	HyperserveError,
 	HyperserveNotFoundError,
 	HyperserveTimeoutError,
 	HyperserveValidationError,
@@ -11,9 +12,41 @@ interface RequestOptions {
 	apiKey: string;
 	timeoutMs: number;
 	body?: unknown;
+	retries?: number;
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryable(err: unknown): boolean {
+	// Retry on 5xx API errors
+	if (err instanceof HyperserveApiError) return true;
+	// Retry on network/infrastructure errors that aren't SDK-typed (e.g. TypeError: Failed to fetch)
+	if (err instanceof Error && !(err instanceof HyperserveError)) return true;
+	return false;
 }
 
 export async function apiRequest<T>(options: RequestOptions): Promise<T> {
+	const { retries = 0 } = options;
+	let attempt = 0;
+
+	while (true) {
+		try {
+			return await attemptRequest<T>(options);
+		} catch (err) {
+			if (attempt >= retries || !isRetryable(err)) {
+				throw err;
+			}
+			// Full jitter: random delay up to min(10s, 100ms × 2^attempt)
+			const delay = Math.random() * Math.min(10_000, 100 * 2 ** attempt);
+			await sleep(delay);
+			attempt++;
+		}
+	}
+}
+
+async function attemptRequest<T>(options: RequestOptions): Promise<T> {
 	const { method, url, apiKey, timeoutMs, body } = options;
 
 	const controller = new AbortController();
@@ -28,7 +61,9 @@ export async function apiRequest<T>(options: RequestOptions): Promise<T> {
 				"X-API-KEY": apiKey,
 				...(body !== undefined ? { "Content-Type": "application/json" } : {}),
 			},
-			body: body !== undefined ? JSON.stringify(body) : null,
+			// Omit body entirely when not present — passing body: null on DELETE requests
+			// can be treated differently by some proxies and intermediaries.
+			...(body !== undefined ? { body: JSON.stringify(body) } : {}),
 			signal: controller.signal,
 		});
 	} catch (err) {

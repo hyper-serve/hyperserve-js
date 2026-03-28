@@ -49,11 +49,11 @@
 ## Future / backlog
 
 ### SDK features
-- [ ] `retries` option on `HyperserveClient` — automatic retry with exponential backoff on transient failures
+- [x] `retries` option on `HyperserveClient` — automatic retry with exponential backoff on transient failures
 - [ ] `onProgress` support in Node.js `uploadVideo` — currently silently ignored; requires a custom `TransformStream` wrapping the readable
 - [ ] Multipart / chunked upload support for files approaching 5 GB
 - [ ] Polling helper — `waitUntilReady(videoId, options?)` that polls `getVideo` until `status === 'ready'` or a timeout is reached
-- [ ] Webhook signature verification utility — helper to verify `X-Hyperserve-Signature` on incoming webhook requests
+- [x] Webhook signature verification utility — helper to verify `X-Hyperserve-Signature` on incoming webhook requests
 
 ### Maintenance
 - [ ] Dependabot for automated dependency updates

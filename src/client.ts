@@ -18,11 +18,13 @@ export class HyperserveClient {
 	private readonly apiKey: string;
 	private readonly baseUrl: string;
 	private readonly timeoutMs: number;
+	private readonly retries: number;
 
 	constructor(options: HyperserveClientOptions) {
 		this.apiKey = options.apiKey;
 		this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
 		this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+		this.retries = options.retries ?? 0;
 	}
 
 	/**
@@ -36,6 +38,7 @@ export class HyperserveClient {
 			url: `${this.baseUrl}/api/video`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
+			retries: this.retries,
 			body: {
 				filename: options.filename,
 				fileSizeBytes: options.fileSizeBytes,
@@ -62,6 +65,7 @@ export class HyperserveClient {
 			url: `${this.baseUrl}/api/video/${videoId}/complete-upload`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
+			retries: this.retries,
 		});
 	}
 
@@ -85,6 +89,7 @@ export class HyperserveClient {
 			url,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
+			retries: this.retries,
 		});
 	}
 
@@ -97,6 +102,7 @@ export class HyperserveClient {
 			url: `${this.baseUrl}/api/video/${videoId}`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
+			retries: this.retries,
 		});
 	}
 
@@ -109,6 +115,7 @@ export class HyperserveClient {
 			url: `${this.baseUrl}/api/video/resolution/${resolutionId}`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
+			retries: this.retries,
 		});
 	}
 

@@ -14,7 +14,8 @@
  * createVideo / completeUpload on your app's behalf.
  */
 
-export { HyperserveError, HyperserveTimeoutError, HyperserveUploadError } from "./errors.js";
+import { HyperserveError, HyperserveTimeoutError, HyperserveUploadError } from "./errors.js";
+export { HyperserveError, HyperserveTimeoutError, HyperserveUploadError };
 export type { PutVideoToStorageRNOptions, VideoResolution, VideoStatus } from "./types.js";
 
 import { putToStorage } from "./storage.js";
@@ -44,6 +45,9 @@ export async function putVideoToStorage(options: PutVideoToStorageRNOptions): Pr
 	// Fetch the local file URI to obtain a Blob. React Native's fetch implementation
 	// supports file:// URIs, allowing us to read local files from the device.
 	const localResponse = await fetch(uri);
+	if (!localResponse.ok) {
+		throw new HyperserveUploadError(`Failed to read local file: ${uri}`);
+	}
 	const blob = await localResponse.blob();
 
 	return putToStorage(uploadUrl, contentType, blob, onProgress);

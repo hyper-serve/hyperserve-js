@@ -20,11 +20,11 @@ class MockXhr {
 	}
 
 	/** Trigger upload progress event */
-	triggerUploadProgress(loaded: number, total: number) {
+	triggerUploadProgress(loaded: number, total: number, lengthComputable = true) {
 		const listeners = this.upload.addEventListener.mock.calls;
 		for (const [event, cb] of listeners as [string, (e: ProgressEvent) => void][]) {
 			if (event === "progress") {
-				cb({ lengthComputable: true, loaded, total } as ProgressEvent);
+				cb({ lengthComputable, loaded, total } as ProgressEvent);
 			}
 		}
 	}
@@ -107,6 +107,14 @@ describe("putToStorage — fetch path (no onProgress)", () => {
 		expect(err).toBeInstanceOf(HyperserveUploadError);
 		expect((err as HyperserveUploadError).uploadStatus).toBe(403);
 	});
+
+	it("propagates network errors from fetch as-is", async () => {
+		vi.mocked(fetch).mockRejectedValue(new TypeError("Failed to fetch"));
+
+		await expect(
+			putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"])),
+		).rejects.toBeInstanceOf(TypeError);
+	});
 });
 
 describe("putToStorage — XHR path (onProgress provided)", () => {
@@ -146,6 +154,24 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 		mockXhr.triggerLoad();
 		await promise;
 		expect(mockXhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "video/webm");
+	});
+
+	it("does not call onProgress when lengthComputable is false", async () => {
+		const onProgress = vi.fn();
+		const promise = putToStorage(
+			"https://s3.example.com/put",
+			"video/mp4",
+			new Blob(["x"]),
+			onProgress,
+		);
+
+		mockXhr.triggerUploadProgress(500_000, 1_000_000, false);
+		mockXhr.triggerLoad();
+		await promise;
+
+		// onProgress(100) fires on load, but the progress event should not have fired
+		expect(onProgress).toHaveBeenCalledTimes(1);
+		expect(onProgress).toHaveBeenCalledWith(100);
 	});
 
 	it("calls onProgress with computed percentage", async () => {

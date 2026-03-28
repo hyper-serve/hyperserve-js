@@ -1,4 +1,5 @@
 export { HyperserveClient } from "./client.js";
+export { verifyWebhookSignature } from "./webhook.js";
 
 export {
 	HyperserveApiError,
@@ -16,7 +17,9 @@ export type {
 	GetVideoOptions,
 	HyperserveClientOptions,
 	PutVideoToStorageOptions,
+	PutVideoToStorageRNOptions,
 	UploadVideoOptions,
+	VerifyWebhookSignatureOptions,
 	VideoResolution,
 	VideoResolutionResult,
 	VideoResult,

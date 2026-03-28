@@ -18,6 +18,29 @@ export interface HyperserveClientOptions {
 	baseUrl?: string;
 	/** Timeout in milliseconds for API calls (not the storage PUT). Defaults to 30000. */
 	timeoutMs?: number;
+	/**
+	 * Number of additional retry attempts on transient failures (5xx responses and network errors).
+	 * Uses exponential backoff with full jitter (random delay up to min(10s, 100ms × 2^attempt)).
+	 * Does not retry on 4xx errors or timeouts. Defaults to 0 (no retries).
+	 */
+	retries?: number;
+}
+
+// --- verifyWebhookSignature ---
+
+export interface VerifyWebhookSignatureOptions {
+	/**
+	 * Value of the x-hyperserve-signature header from the incoming webhook request.
+	 * Format: "{timestampMs}.{hmac-sha256-hex}"
+	 */
+	signature: string;
+	/** Your webhook signing secret from the Hyperserve dashboard. */
+	secret: string;
+	/**
+	 * Maximum age of the timestamp in milliseconds. Defaults to 300000 (5 minutes).
+	 * Must match or exceed the server-side tolerance to avoid rejecting valid webhooks.
+	 */
+	toleranceMs?: number;
 }
 
 // --- createVideo ---
@@ -28,7 +51,7 @@ export interface CreateVideoOptions {
 	/** File size in bytes. */
 	fileSizeBytes: number;
 	/** At least one resolution is required. */
-	resolutions: VideoResolution[];
+	resolutions: [VideoResolution, ...VideoResolution[]];
 	/** Controls whether playback URLs are public or time-limited signed URLs. */
 	isPublic: boolean;
 	/** Timestamps (seconds) at which to generate thumbnail images. */
@@ -65,7 +88,7 @@ export interface UploadVideoOptions {
 	filename: string;
 	/** Required when file is a ReadableStream (cannot be inferred). Inferred automatically for Blob/Buffer. */
 	fileSizeBytes?: number;
-	resolutions: VideoResolution[];
+	resolutions: [VideoResolution, ...VideoResolution[]];
 	isPublic: boolean;
 	thumbnailTimestampsSeconds?: number[];
 	customMetadata?: Record<string, unknown>;

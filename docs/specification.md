@@ -243,6 +243,8 @@ import { HyperserveClient } from 'hyperserve-sdk';
 const hyperserve = new HyperserveClient({ apiKey: 'hs_...' });
 ```
 
+The API key is sent as the `X-API-KEY` request header on every API call.
+
 #### `HyperserveClientOptions`
 
 | Option | Type | Required | Default | Description |
@@ -250,6 +252,7 @@ const hyperserve = new HyperserveClient({ apiKey: 'hs_...' });
 | `apiKey` | `string` | Yes | — | Hyperserve API key |
 | `baseUrl` | `string` | No | `'https://api.hyperserve.io'` | Override for local dev |
 | `timeoutMs` | `number` | No | `30_000` | Timeout for API calls (not the storage PUT) |
+| `retries` | `number` | No | `0` | Additional retry attempts on transient failures: 5xx responses and raw network errors (e.g. `TypeError: Failed to fetch`). Uses exponential backoff with full jitter (random delay up to `min(10s, 100ms × 2^attempt)`). Does not retry on 4xx errors or timeouts. |
 
 ---
 
@@ -363,6 +366,39 @@ Deletes a single resolution. Returns `Promise<void>`.
 
 ---
 
+### `verifyWebhookSignature(options)` — server only
+
+Verifies the `x-hyperserve-signature` header on an incoming webhook request. Returns `Promise<boolean>`.
+
+The header value has the format `{timestampMs}.{hmac-sha256-hex}`, where the HMAC is computed over the timestamp string using your webhook signing secret. The timestamp is checked for freshness to prevent replay attacks.
+
+Uses the Web Crypto API for constant-time comparison — no Node-specific imports, safe on all supported server environments.
+
+```typescript
+import { verifyWebhookSignature } from 'hyperserve-sdk';
+
+// In your webhook handler (Express, Next.js API route, Hono, etc.)
+const isValid = await verifyWebhookSignature({
+  signature: req.headers['x-hyperserve-signature'] ?? '',
+  secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+});
+if (!isValid) return res.status(401).end();
+```
+
+#### Options
+
+| Option | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `signature` | `string` | Yes | — | Value of the `x-hyperserve-signature` header |
+| `secret` | `string` | Yes | — | Webhook signing secret from the Hyperserve dashboard |
+| `toleranceMs` | `number` | No | `300_000` | Maximum age of the timestamp in ms. Defaults to 5 minutes, matching server-side enforcement. |
+
+#### Returns `Promise<boolean>`
+
+Returns `false` (never throws) if the header is missing, malformed, the timestamp is expired, or the signature does not match.
+
+---
+
 ### `putVideoToStorage(options)` — browser utility
 
 Standalone export for browser use. No API key. Sends the file to the presigned URL returned by your backend.
@@ -453,7 +489,7 @@ try {
 ## Package exports
 
 ```
-hyperserve-sdk              → server client, all types, all errors
+hyperserve-sdk              → server client, verifyWebhookSignature, all types, all errors
 hyperserve-sdk/browser      → putVideoToStorage (File | Blob), safe for browser bundles
 hyperserve-sdk/react-native → putVideoToStorage (URI string), safe for RN bundles
 ```
@@ -490,6 +526,6 @@ Built with `tsup`. Outputs CJS + ESM + `.d.ts` for all three entry points. No ru
 
 - **Polling** — does not poll for transcoding completion. Use webhooks or call `getVideo` in your own logic.
 - **API key in client code** — the SDK does not support using an API key in the browser or React Native. Use the backend proxy pattern.
-- **Retry** — no automatic retry on failure. A future `retries` option is reserved.
+- **Retry on storage PUT** — the `retries` option on `HyperserveClient` applies to API calls only, not the storage PUT (`uploadVideo` / `putVideoToStorage`).
 - **Chunked / multipart upload** — single-part PUT only. Reserved for files approaching the 5 GB limit.
 - **Token refresh** — API keys are long-lived; no OAuth flow.
