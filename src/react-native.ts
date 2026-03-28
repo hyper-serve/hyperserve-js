@@ -15,8 +15,9 @@
  */
 
 import { HyperserveError, HyperserveTimeoutError, HyperserveUploadError } from "./errors.js";
-export { HyperserveError, HyperserveTimeoutError, HyperserveUploadError };
+
 export type { PutVideoToStorageRNOptions, VideoResolution, VideoStatus } from "./types.js";
+export { HyperserveError, HyperserveTimeoutError, HyperserveUploadError };
 
 import { putToStorage } from "./storage.js";
 import type { PutVideoToStorageRNOptions } from "./types.js";
