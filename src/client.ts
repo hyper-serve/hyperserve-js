@@ -11,7 +11,7 @@ import type {
 	VideoResult,
 } from "./types.js";
 
-const DEFAULT_BASE_URL = "https://api.hyperserve.io";
+const DEFAULT_BASE_URL = "https://api.hyperserve.io/api";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class HyperserveClient {
@@ -35,7 +35,7 @@ export class HyperserveClient {
 	async createVideo(options: CreateVideoOptions): Promise<CreateVideoResult> {
 		return apiRequest<CreateVideoResult>({
 			method: "POST",
-			url: `${this.baseUrl}/api/video`,
+			url: `${this.baseUrl}/video`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
 			retries: this.retries,
@@ -62,7 +62,7 @@ export class HyperserveClient {
 	async completeUpload(videoId: string): Promise<CompleteUploadResult> {
 		return apiRequest<CompleteUploadResult>({
 			method: "POST",
-			url: `${this.baseUrl}/api/video/${videoId}/complete-upload`,
+			url: `${this.baseUrl}/video/${videoId}/complete-upload`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
 			retries: this.retries,
@@ -81,8 +81,8 @@ export class HyperserveClient {
 		const expiration = options?.expirationSeconds ?? 3600;
 
 		const url = isPrivate
-			? `${this.baseUrl}/api/video/${videoId}/private/${expiration}`
-			: `${this.baseUrl}/api/video/${videoId}/public`;
+			? `${this.baseUrl}/video/${videoId}/private/${expiration}`
+			: `${this.baseUrl}/video/${videoId}/public`;
 
 		return apiRequest<VideoResult>({
 			method: "GET",
@@ -99,7 +99,7 @@ export class HyperserveClient {
 	async deleteVideo(videoId: string): Promise<void> {
 		return apiRequest<void>({
 			method: "DELETE",
-			url: `${this.baseUrl}/api/video/${videoId}`,
+			url: `${this.baseUrl}/video/${videoId}`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
 			retries: this.retries,
@@ -112,7 +112,7 @@ export class HyperserveClient {
 	async deleteResolution(resolutionId: string): Promise<void> {
 		return apiRequest<void>({
 			method: "DELETE",
-			url: `${this.baseUrl}/api/video/resolution/${resolutionId}`,
+			url: `${this.baseUrl}/video/resolution/${resolutionId}`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
 			retries: this.retries,
