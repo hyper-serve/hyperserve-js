@@ -169,7 +169,7 @@ function putWithFetch(uploadUrl, contentType, body) {
 }
 
 // src/client.ts
-var DEFAULT_BASE_URL = "https://api.hyperserve.io";
+var DEFAULT_BASE_URL = "https://api.hyperserve.io/api";
 var DEFAULT_TIMEOUT_MS = 3e4;
 var HyperserveClient = class {
   constructor(options) {
@@ -186,7 +186,7 @@ var HyperserveClient = class {
   async createVideo(options) {
     return apiRequest({
       method: "POST",
-      url: `${this.baseUrl}/api/video`,
+      url: `${this.baseUrl}/video`,
       apiKey: this.apiKey,
       timeoutMs: this.timeoutMs,
       retries: this.retries,
@@ -212,7 +212,7 @@ var HyperserveClient = class {
   async completeUpload(videoId) {
     return apiRequest({
       method: "POST",
-      url: `${this.baseUrl}/api/video/${videoId}/complete-upload`,
+      url: `${this.baseUrl}/video/${videoId}/complete-upload`,
       apiKey: this.apiKey,
       timeoutMs: this.timeoutMs,
       retries: this.retries
@@ -228,7 +228,7 @@ var HyperserveClient = class {
   async getVideo(videoId, options) {
     const isPrivate = options?.private === true;
     const expiration = options?.expirationSeconds ?? 3600;
-    const url = isPrivate ? `${this.baseUrl}/api/video/${videoId}/private/${expiration}` : `${this.baseUrl}/api/video/${videoId}/public`;
+    const url = isPrivate ? `${this.baseUrl}/video/${videoId}/private/${expiration}` : `${this.baseUrl}/video/${videoId}/public`;
     return apiRequest({
       method: "GET",
       url,
@@ -243,7 +243,7 @@ var HyperserveClient = class {
   async deleteVideo(videoId) {
     return apiRequest({
       method: "DELETE",
-      url: `${this.baseUrl}/api/video/${videoId}`,
+      url: `${this.baseUrl}/video/${videoId}`,
       apiKey: this.apiKey,
       timeoutMs: this.timeoutMs,
       retries: this.retries
@@ -255,7 +255,7 @@ var HyperserveClient = class {
   async deleteResolution(resolutionId) {
     return apiRequest({
       method: "DELETE",
-      url: `${this.baseUrl}/api/video/resolution/${resolutionId}`,
+      url: `${this.baseUrl}/video/resolution/${resolutionId}`,
       apiKey: this.apiKey,
       timeoutMs: this.timeoutMs,
       retries: this.retries
