@@ -20,8 +20,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 function isRetryable(err: unknown): boolean {
-	// Retry on 5xx API errors
-	if (err instanceof HyperserveApiError) return true;
+	// Retry on 5xx API errors only — not 4xx, not timeouts
+	if (err instanceof HyperserveApiError && err.statusCode !== undefined && err.statusCode >= 500)
+		return true;
 	// Retry on network/infrastructure errors that aren't SDK-typed (e.g. TypeError: Failed to fetch)
 	if (err instanceof Error && !(err instanceof HyperserveError)) return true;
 	return false;
@@ -80,7 +81,14 @@ async function attemptRequest<T>(options: RequestOptions): Promise<T> {
 		if (response.status === 204) {
 			return undefined as T;
 		}
-		return response.json() as Promise<T>;
+		try {
+			return (await response.json()) as T;
+		} catch {
+			throw new HyperserveApiError(
+				`Failed to parse response from ${url}`,
+				response.status,
+			);
+		}
 	}
 
 	let errorBody: { message?: string } = {};

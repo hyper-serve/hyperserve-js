@@ -6,8 +6,9 @@ const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enfor
  * Verifies the x-hyperserve-signature header on an incoming webhook request.
  *
  * The signature header has the format "{timestampMs}.{hmac-sha256-hex}", where the HMAC
- * is computed over the timestamp string using your webhook signing secret. The timestamp
- * is also checked for freshness to prevent replay attacks.
+ * is computed over "{timestampMs}.{rawBody}" using your webhook signing secret. This proves
+ * both when the request was sent (replay protection) and that the body was not tampered with
+ * (integrity). Any modification to the body or timestamp will invalidate the signature.
  *
  * Returns true if the signature is valid and the timestamp is within the tolerance window.
  * Returns false if the signature is invalid, the timestamp has expired, or the header is malformed.
@@ -15,20 +16,34 @@ const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enfor
  * Uses the Web Crypto API for a constant-time HMAC comparison — safe on Node 18+, Bun, Deno,
  * Cloudflare Workers, Vercel Edge, and all other supported server environments.
  *
+ * IMPORTANT: pass the raw request body string exactly as received. Do not parse and re-serialize
+ * JSON — any whitespace difference will invalidate the signature.
+ *
  * @example
  * import { verifyWebhookSignature } from 'hyperserve-sdk';
  *
- * // In your webhook handler (Express, Next.js API route, etc.)
- * const isValid = await verifyWebhookSignature({
- *   signature: req.headers['x-hyperserve-signature'] ?? '',
- *   secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+ * // Express (use express.raw, not express.json, so you get the raw body)
+ * app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+ *   const isValid = await verifyWebhookSignature({
+ *     signature: req.headers['x-hyperserve-signature'] ?? '',
+ *     secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+ *     body: req.body.toString(),
+ *   });
+ *   if (!isValid) return res.status(401).end();
  * });
- * if (!isValid) return res.status(401).end();
+ *
+ * // Next.js App Router
+ * const body = await request.text();
+ * const isValid = await verifyWebhookSignature({
+ *   signature: request.headers.get('x-hyperserve-signature') ?? '',
+ *   secret: process.env.HYPERSERVE_WEBHOOK_SECRET!,
+ *   body,
+ * });
  */
 export async function verifyWebhookSignature(
 	options: VerifyWebhookSignatureOptions,
 ): Promise<boolean> {
-	const { signature, secret, toleranceMs = DEFAULT_TOLERANCE_MS } = options;
+	const { signature, secret, body, toleranceMs = DEFAULT_TOLERANCE_MS } = options;
 
 	const dotIndex = signature.indexOf(".");
 	if (dotIndex === -1) return false;
@@ -57,8 +72,9 @@ export async function verifyWebhookSignature(
 		["verify"],
 	);
 
-	// crypto.subtle.verify performs a constant-time comparison
-	return crypto.subtle.verify("HMAC", key, receivedBytes, encoder.encode(timestampStr));
+	// The signed message is "{timestampMs}.{rawBody}" — covers both freshness and integrity.
+	// crypto.subtle.verify performs a constant-time comparison.
+	return crypto.subtle.verify("HMAC", key, receivedBytes, encoder.encode(`${timestampStr}.${body}`));
 }
 
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {

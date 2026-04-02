@@ -14,7 +14,7 @@ export type VideoStatus = "pending_upload" | "processing" | "ready" | "fail";
 export interface HyperserveClientOptions {
 	/** Your Hyperserve API key. Must be kept server-side — never expose in browser code. */
 	apiKey: string;
-	/** Override the base URL. Useful for local development. Defaults to https://api.hyperserve.io */
+	/** Override the base URL (must include the /api prefix). Useful for local development. Defaults to https://api.hyperserve.io/api */
 	baseUrl?: string;
 	/** Timeout in milliseconds for API calls (not the storage PUT). Defaults to 30000. */
 	timeoutMs?: number;
@@ -36,6 +36,21 @@ export interface VerifyWebhookSignatureOptions {
 	signature: string;
 	/** Your webhook signing secret from the Hyperserve dashboard. */
 	secret: string;
+	/**
+	 * The raw request body as a string. Must be the exact bytes received — do not parse
+	 * and re-serialize, as any whitespace difference will invalidate the signature.
+	 *
+	 * @example
+	 * // Express
+	 * app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+	 *   const body = req.body.toString();
+	 *   ...
+	 * });
+	 *
+	 * // Next.js App Router
+	 * const body = await request.text();
+	 */
+	body: string;
 	/**
 	 * Maximum age of the timestamp in milliseconds. Defaults to 300000 (5 minutes).
 	 * Must match or exceed the server-side tolerance to avoid rejecting valid webhooks.

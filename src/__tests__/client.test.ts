@@ -435,7 +435,7 @@ describe("HyperserveClient — baseUrl", () => {
 	it("strips trailing slash from baseUrl", async () => {
 		mockFetch(201, createVideoResponse);
 
-		await makeClient({ baseUrl: "https://custom.api.com/" }).createVideo({
+		await makeClient({ baseUrl: "https://custom.api.com/api/" }).createVideo({
 			filename: "clip.mp4",
 			fileSizeBytes: 100,
 			resolutions: ["480p"],
@@ -449,7 +449,7 @@ describe("HyperserveClient — baseUrl", () => {
 	it("uses custom baseUrl", async () => {
 		mockFetch(201, createVideoResponse);
 
-		await makeClient({ baseUrl: "http://localhost:3001" }).createVideo({
+		await makeClient({ baseUrl: "http://localhost:3001/api" }).createVideo({
 			filename: "clip.mp4",
 			fileSizeBytes: 100,
 			resolutions: ["480p"],

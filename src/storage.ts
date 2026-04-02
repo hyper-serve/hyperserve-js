@@ -13,8 +13,10 @@ export async function putToStorage(
 	body: Blob | ReadableStream,
 	onProgress?: (percent: number) => void,
 ): Promise<void> {
-	if (onProgress !== undefined && typeof XMLHttpRequest !== "undefined") {
-		return putWithXhr(uploadUrl, contentType, body as Blob, onProgress);
+	// XHR is used for progress reporting but does not support ReadableStream bodies.
+	// Fall back to fetch (no progress) when the body is a stream.
+	if (onProgress !== undefined && typeof XMLHttpRequest !== "undefined" && !(body instanceof ReadableStream)) {
+		return putWithXhr(uploadUrl, contentType, body, onProgress);
 	}
 	return putWithFetch(uploadUrl, contentType, body);
 }
