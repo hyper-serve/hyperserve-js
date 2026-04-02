@@ -74,7 +74,12 @@ export async function verifyWebhookSignature(
 
 	// The signed message is "{timestampMs}.{rawBody}" — covers both freshness and integrity.
 	// crypto.subtle.verify performs a constant-time comparison.
-	return crypto.subtle.verify("HMAC", key, receivedBytes, encoder.encode(`${timestampStr}.${body}`));
+	return crypto.subtle.verify(
+		"HMAC",
+		key,
+		receivedBytes,
+		encoder.encode(`${timestampStr}.${body}`),
+	);
 }
 
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {

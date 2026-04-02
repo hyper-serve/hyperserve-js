@@ -9,7 +9,11 @@ const BODY = JSON.stringify({ event: "video.ready", videoId: "abc-123" });
  * matching the format produced by the Hyperserve server: "{timestampMs}.{hmac-sha256-hex}"
  * The HMAC covers "{timestampMs}.{rawBody}".
  */
-async function generateSignature(timestampMs: number, secret: string, body: string): Promise<string> {
+async function generateSignature(
+	timestampMs: number,
+	secret: string,
+	body: string,
+): Promise<string> {
 	const encoder = new TextEncoder();
 	const key = await crypto.subtle.importKey(
 		"raw",
@@ -93,9 +97,9 @@ describe("verifyWebhookSignature", () => {
 		const signature = await generateSignature(1_000_000, SECRET, BODY);
 		const tamperedBody = JSON.stringify({ event: "video.ready", videoId: "evil-456" });
 
-		expect(
-			await verifyWebhookSignature({ signature, secret: SECRET, body: tamperedBody }),
-		).toBe(false);
+		expect(await verifyWebhookSignature({ signature, secret: SECRET, body: tamperedBody })).toBe(
+			false,
+		);
 	});
 
 	it("returns false when body whitespace differs from what was signed", async () => {
@@ -121,9 +125,9 @@ describe("verifyWebhookSignature", () => {
 	});
 
 	it("returns false when the header has no dot separator", async () => {
-		expect(await verifyWebhookSignature({ signature: "nodothere", secret: SECRET, body: BODY })).toBe(
-			false,
-		);
+		expect(
+			await verifyWebhookSignature({ signature: "nodothere", secret: SECRET, body: BODY }),
+		).toBe(false);
 	});
 
 	it("returns false for an empty signature", async () => {

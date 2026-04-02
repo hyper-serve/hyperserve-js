@@ -15,7 +15,11 @@ export async function putToStorage(
 ): Promise<void> {
 	// XHR is used for progress reporting but does not support ReadableStream bodies.
 	// Fall back to fetch (no progress) when the body is a stream.
-	if (onProgress !== undefined && typeof XMLHttpRequest !== "undefined" && !(body instanceof ReadableStream)) {
+	if (
+		onProgress !== undefined &&
+		typeof XMLHttpRequest !== "undefined" &&
+		!(body instanceof ReadableStream)
+	) {
 		return putWithXhr(uploadUrl, contentType, body, onProgress);
 	}
 	return putWithFetch(uploadUrl, contentType, body);

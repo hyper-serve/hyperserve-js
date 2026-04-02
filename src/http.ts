@@ -84,10 +84,7 @@ async function attemptRequest<T>(options: RequestOptions): Promise<T> {
 		try {
 			return (await response.json()) as T;
 		} catch {
-			throw new HyperserveApiError(
-				`Failed to parse response from ${url}`,
-				response.status,
-			);
+			throw new HyperserveApiError(`Failed to parse response from ${url}`, response.status);
 		}
 	}
 
