@@ -25,7 +25,7 @@ var HyperserveTimeoutError = class extends HyperserveError {
 
 // src/storage.ts
 async function putToStorage(uploadUrl, contentType, body, onProgress) {
-  if (onProgress !== void 0 && typeof XMLHttpRequest !== "undefined") {
+  if (onProgress !== void 0 && typeof XMLHttpRequest !== "undefined" && !(body instanceof ReadableStream)) {
     return putWithXhr(uploadUrl, contentType, body, onProgress);
   }
   return putWithFetch(uploadUrl, contentType, body);

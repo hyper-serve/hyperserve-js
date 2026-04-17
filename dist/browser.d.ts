@@ -1,5 +1,5 @@
-import { P as PutVideoToStorageOptions } from './errors-ZQDMm3uM.js';
-export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploadError, k as VideoResolution, m as VideoStatus } from './errors-ZQDMm3uM.js';
+import { P as PutVideoToStorageOptions } from './errors-C89laaKB.js';
+export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploadError, k as VideoResolution, m as VideoStatus } from './errors-C89laaKB.js';
 
 /**
  * Browser-only utilities for the Hyperserve SDK.

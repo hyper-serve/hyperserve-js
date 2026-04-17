@@ -1,5 +1,5 @@
-import { j as PutVideoToStorageRNOptions } from './errors-ZQDMm3uM.js';
-export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploadError, k as VideoResolution, m as VideoStatus } from './errors-ZQDMm3uM.js';
+import { j as PutVideoToStorageRNOptions } from './errors-C89laaKB.js';
+export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploadError, k as VideoResolution, m as VideoStatus } from './errors-C89laaKB.js';
 
 /**
  * React Native utilities for the Hyperserve SDK.

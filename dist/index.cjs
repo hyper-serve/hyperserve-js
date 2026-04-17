@@ -52,7 +52,8 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function isRetryable(err) {
-  if (err instanceof HyperserveApiError) return true;
+  if (err instanceof HyperserveApiError && err.statusCode !== void 0 && err.statusCode >= 500)
+    return true;
   if (err instanceof Error && !(err instanceof HyperserveError)) return true;
   return false;
 }
@@ -101,7 +102,11 @@ async function attemptRequest(options) {
     if (response.status === 204) {
       return void 0;
     }
-    return response.json();
+    try {
+      return await response.json();
+    } catch {
+      throw new HyperserveApiError(`Failed to parse response from ${url}`, response.status);
+    }
   }
   let errorBody = {};
   try {
@@ -289,7 +294,7 @@ var HyperserveClient = class {
 // src/webhook.ts
 var DEFAULT_TOLERANCE_MS = 3e5;
 async function verifyWebhookSignature(options) {
-  const { signature, secret, toleranceMs = DEFAULT_TOLERANCE_MS } = options;
+  const { signature, secret, body, toleranceMs = DEFAULT_TOLERANCE_MS } = options;
   const dotIndex = signature.indexOf(".");
   if (dotIndex === -1) return false;
   const timestampStr = signature.slice(0, dotIndex);
@@ -307,7 +312,12 @@ async function verifyWebhookSignature(options) {
     false,
     ["verify"]
   );
-  return crypto.subtle.verify("HMAC", key, receivedBytes, encoder.encode(timestampStr));
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    receivedBytes,
+    encoder.encode(`${timestampStr}.${body}`)
+  );
 }
 function hexToBytes(hex) {
   if (hex.length === 0 || hex.length % 2 !== 0) return null;
