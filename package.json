@@ -1,89 +1,89 @@
 {
-  "name": "hyperserve-sdk",
-  "version": "0.1.0",
-  "description": "TypeScript SDK for the Hyperserve video infrastructure API",
-  "license": "MIT",
-  "author": "Ryan Trann <admin@hyperserve.io>",
-  "homepage": "https://hyperserve.io",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hyper-serve/hyperserve-sdk"
-  },
-  "bugs": {
-    "url": "https://github.com/hyper-serve/hyperserve-sdk/issues"
-  },
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./browser": {
-      "import": {
-        "types": "./dist/browser.d.ts",
-        "default": "./dist/browser.js"
-      },
-      "require": {
-        "types": "./dist/browser.d.cts",
-        "default": "./dist/browser.cjs"
-      }
-    },
-    "./react-native": {
-      "react-native": "./dist/react-native.js",
-      "import": {
-        "types": "./dist/react-native.d.ts",
-        "default": "./dist/react-native.js"
-      },
-      "require": {
-        "types": "./dist/react-native.d.cts",
-        "default": "./dist/react-native.cjs"
-      }
-    }
-  },
-  "sideEffects": false,
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "lint": "biome lint ./src",
-    "lint:fix": "biome lint --write ./src",
-    "format": "biome format ./src",
-    "format:write": "biome format --write ./src",
-    "check": "biome check ./src",
-    "check:write": "biome check --write ./src",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "npm run build && npm run typecheck",
-    "prepare": "husky"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
-    "@types/node": "^22.0.0",
-    "husky": "^9.1.7",
-    "tsup": "^8.5.1",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "keywords": [
-    "hyperserve",
-    "video",
-    "sdk",
-    "upload",
-    "transcoding"
-  ]
+	"name": "@hyperserve/hyperserve-js",
+	"version": "0.1.0",
+	"description": "TypeScript SDK for the Hyperserve video infrastructure API",
+	"license": "MIT",
+	"author": "Ryan Trann <admin@hyperserve.io>",
+	"homepage": "https://hyperserve.io",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/hyper-serve/hyperserve-sdk"
+	},
+	"bugs": {
+		"url": "https://github.com/hyper-serve/hyperserve-sdk/issues"
+	},
+	"type": "module",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		},
+		"./browser": {
+			"import": {
+				"types": "./dist/browser.d.ts",
+				"default": "./dist/browser.js"
+			},
+			"require": {
+				"types": "./dist/browser.d.cts",
+				"default": "./dist/browser.cjs"
+			}
+		},
+		"./react-native": {
+			"react-native": "./dist/react-native.js",
+			"import": {
+				"types": "./dist/react-native.d.ts",
+				"default": "./dist/react-native.js"
+			},
+			"require": {
+				"types": "./dist/react-native.d.cts",
+				"default": "./dist/react-native.cjs"
+			}
+		}
+	},
+	"sideEffects": false,
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome lint ./src",
+		"lint:fix": "biome lint --write ./src",
+		"format": "biome format ./src",
+		"format:write": "biome format --write ./src",
+		"check": "biome check ./src",
+		"check:write": "biome check --write ./src",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"prepublishOnly": "npm run build && npm run typecheck",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.9",
+		"@types/node": "^22.0.0",
+		"husky": "^9.1.7",
+		"tsup": "^8.5.1",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.2"
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"keywords": [
+		"hyperserve",
+		"video",
+		"sdk",
+		"upload",
+		"transcoding"
+	]
 }
