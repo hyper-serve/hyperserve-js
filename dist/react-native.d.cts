@@ -4,11 +4,11 @@ export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploa
 /**
  * React Native utilities for the Hyperserve SDK.
  *
- * Import from 'hyperserve-sdk/react-native' — this entry point contains no
+ * Import from '@hyperserve/hyperserve-js/react-native' — this entry point contains no
  * API key logic and is safe to bundle into your React Native app.
  *
  * Usage:
- *   import { putVideoToStorage } from 'hyperserve-sdk/react-native';
+ *   import { putVideoToStorage } from '@hyperserve/hyperserve-js/react-native';
  *
  *   // uri comes from expo-image-picker, react-native-image-picker, etc.
  *   await putVideoToStorage({ uploadUrl, contentType, uri: asset.uri, onProgress });

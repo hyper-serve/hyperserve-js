@@ -273,7 +273,7 @@ var HyperserveClient = class {
    * Wraps createVideo, the storage PUT, and completeUpload into a single call.
    *
    * Not suitable for the browser proxy pattern — use createVideo + putVideoToStorage
-   * from 'hyperserve-sdk/browser' + completeUpload separately for that flow.
+   * from '@hyperserve/hyperserve-js/browser' + completeUpload separately for that flow.
    */
   async uploadVideo(options) {
     const { file, filename, resolutions, isPublic, thumbnailTimestampsSeconds, customMetadata } = options;

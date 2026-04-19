@@ -7,10 +7,10 @@
 	"homepage": "https://hyperserve.io",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/hyper-serve/hyperserve-sdk"
+		"url": "https://github.com/hyper-serve/hyperserve-js"
 	},
 	"bugs": {
-		"url": "https://github.com/hyper-serve/hyperserve-sdk/issues"
+		"url": "https://github.com/hyper-serve/hyperserve-js/issues"
 	},
 	"type": "module",
 	"exports": {

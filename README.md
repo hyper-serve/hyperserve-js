@@ -1,11 +1,11 @@
-# hyperserve-sdk
+# @hyperserve/hyperserve-js
 
 TypeScript SDK for the [Hyperserve](https://hyperserve.io) video infrastructure API. Works in Node.js, browsers, and React Native.
 
 ## Installation
 
 ```bash
-npm install hyperserve-sdk
+npm install @hyperserve/hyperserve-js
 ```
 
 ## How it works
@@ -25,7 +25,7 @@ Hyperserve uploads are a three-step flow. Your **backend** handles steps 1 and 3
 ### 1. Backend — create the upload
 
 ```typescript
-import { HyperserveClient } from 'hyperserve-sdk';
+import { HyperserveClient } from '@hyperserve/hyperserve-js';
 
 const hyperserve = new HyperserveClient({ apiKey: process.env.HYPERSERVE_API_KEY });
 
@@ -44,7 +44,7 @@ return { videoId: upload.id, uploadUrl: upload.uploadUrl, contentType: upload.co
 ### 2a. Browser — upload the file
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/browser';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/browser';
 
 const { videoId, uploadUrl, contentType } = await fetch('/api/create-upload', {
   method: 'POST',
@@ -65,7 +65,7 @@ await fetch('/api/complete-upload', { method: 'POST', body: JSON.stringify({ vid
 ### 2b. React Native — upload the file
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/react-native';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/react-native';
 
 // asset from expo-image-picker, react-native-image-picker, etc.
 const { videoId, uploadUrl, contentType } = await fetch('https://your-api.com/create-upload', {
@@ -208,7 +208,7 @@ const result = await hyperserve.uploadVideo({
 Verifies the `x-hyperserve-signature` header on incoming webhook requests. Returns `Promise<boolean>` — never throws.
 
 ```typescript
-import { verifyWebhookSignature } from 'hyperserve-sdk';
+import { verifyWebhookSignature } from '@hyperserve/hyperserve-js';
 
 const isValid = await verifyWebhookSignature({
   signature: req.headers['x-hyperserve-signature'] ?? '',
@@ -237,7 +237,7 @@ import {
   HyperserveNotFoundError,
   HyperserveUploadError,
   HyperserveTimeoutError,
-} from 'hyperserve-sdk';
+} from '@hyperserve/hyperserve-js';
 
 try {
   await hyperserve.createVideo({ ... });
@@ -255,7 +255,7 @@ try {
 }
 ```
 
-`HyperserveUploadError` and `HyperserveTimeoutError` are also exported from `hyperserve-sdk/browser` and `hyperserve-sdk/react-native`.
+`HyperserveUploadError` and `HyperserveTimeoutError` are also exported from `@hyperserve/hyperserve-js/browser` and `@hyperserve/hyperserve-js/react-native`.
 
 ---
 
@@ -271,9 +271,9 @@ import type {
   VideoResult,
   VideoResolutionResult,
   VerifyWebhookSignatureOptions,
-  PutVideoToStorageOptions,    // for hyperserve-sdk/browser
-  PutVideoToStorageRNOptions,  // for hyperserve-sdk/react-native
-} from 'hyperserve-sdk';
+  PutVideoToStorageOptions,    // for @hyperserve/hyperserve-js/browser
+  PutVideoToStorageRNOptions,  // for @hyperserve/hyperserve-js/react-native
+} from 'hyperserve-js';
 ```
 
 ---

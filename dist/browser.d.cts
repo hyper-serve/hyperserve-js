@@ -4,11 +4,11 @@ export { e as HyperserveError, g as HyperserveTimeoutError, h as HyperserveUploa
 /**
  * Browser-only utilities for the Hyperserve SDK.
  *
- * Import from 'hyperserve-sdk/browser' — this entry point contains no API key
+ * Import from '@hyperserve/hyperserve-js/browser' — this entry point contains no API key
  * logic and is safe to bundle into client-side code.
  *
  * Usage:
- *   import { putVideoToStorage } from 'hyperserve-sdk/browser';
+ *   import { putVideoToStorage } from '@hyperserve/hyperserve-js/browser';
  *
  *   // uploadUrl and contentType come from your own backend
  *   await putVideoToStorage({ uploadUrl, contentType, file, onProgress });

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A TypeScript-first, isomorphic SDK for the Hyperserve API. Published to npm as `hyperserve-sdk`.
+A TypeScript-first, isomorphic SDK for the Hyperserve API. Published to npm as `@hyperserve/hyperserve-js`.
 
 Hyperserve is a video infrastructure API for app developers. The SDK consumer is always a developer building an application — not an end user. The SDK surfaces three distinct concerns that map to where code runs in a typical app architecture:
 
@@ -74,7 +74,7 @@ No polyfills required for any entry point. `Buffer` and `ReadableStream` are not
 The most common server-side path. The backend creates the video record and hands the presigned URL back to its own frontend or mobile app.
 
 ```typescript
-import { HyperserveClient } from 'hyperserve-sdk';
+import { HyperserveClient } from '@hyperserve/hyperserve-js';
 
 const hyperserve = new HyperserveClient({ apiKey: process.env.HYPERSERVE_API_KEY });
 
@@ -103,7 +103,7 @@ export async function createUploadHandler(req: Request) {
 The frontend receives the upload details from its own backend and sends the file directly to storage.
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/browser';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/browser';
 
 // uploadUrl and contentType come from your own backend
 await putVideoToStorage({
@@ -127,7 +127,7 @@ await fetch('/api/complete-upload', {
 A React Native app receives a local file URI from a video picker and sends the file directly to storage. The API key never touches the mobile app.
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/react-native';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 // or: import * as ImagePicker from 'expo-image-picker';
 
@@ -185,7 +185,7 @@ An internal tool or CI pipeline uploading assets programmatically.
 
 ```typescript
 import { createReadStream, statSync } from 'fs';
-import { HyperserveClient } from 'hyperserve-sdk';
+import { HyperserveClient } from '@hyperserve/hyperserve-js';
 
 const hyperserve = new HyperserveClient({ apiKey: process.env.HYPERSERVE_API_KEY });
 
@@ -238,7 +238,7 @@ const result = await hyperserve.uploadVideo({
 ### Server client instantiation
 
 ```typescript
-import { HyperserveClient } from 'hyperserve-sdk';
+import { HyperserveClient } from '@hyperserve/hyperserve-js';
 
 const hyperserve = new HyperserveClient({ apiKey: 'hs_...' });
 ```
@@ -375,7 +375,7 @@ The header value has the format `{timestampMs}.{hmac-sha256-hex}`, where the HMA
 Uses the Web Crypto API for constant-time comparison — no Node-specific imports, safe on all supported server environments.
 
 ```typescript
-import { verifyWebhookSignature } from 'hyperserve-sdk';
+import { verifyWebhookSignature } from '@hyperserve/hyperserve-js';
 
 // In your webhook handler (Express, Next.js API route, Hono, etc.)
 const isValid = await verifyWebhookSignature({
@@ -404,7 +404,7 @@ Returns `false` (never throws) if the header is missing, malformed, the timestam
 Standalone export for browser use. No API key. Sends the file to the presigned URL returned by your backend.
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/browser';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/browser';
 ```
 
 #### Options
@@ -425,7 +425,7 @@ import { putVideoToStorage } from 'hyperserve-sdk/browser';
 Standalone export for React Native use. No API key. Accepts a local file URI from a video/image picker, converts it to a Blob internally, and PUTs to the presigned URL.
 
 ```typescript
-import { putVideoToStorage } from 'hyperserve-sdk/react-native';
+import { putVideoToStorage } from '@hyperserve/hyperserve-js/react-native';
 ```
 
 #### Options
@@ -468,10 +468,10 @@ HyperserveError                  (base — message, statusCode?)
 └── HyperserveTimeoutError       (request exceeded timeoutMs)
 ```
 
-`HyperserveError`, `HyperserveUploadError`, and `HyperserveTimeoutError` are also exported from `hyperserve-sdk/browser` and `hyperserve-sdk/react-native` so consumers can catch errors without importing from the server entry.
+`HyperserveError`, `HyperserveUploadError`, and `HyperserveTimeoutError` are also exported from `hyperserve-js/browser` and `hyperserve-js/react-native` so consumers can catch errors without importing from the server entry.
 
 ```typescript
-import { HyperserveClient, HyperserveValidationError, HyperserveError } from 'hyperserve-sdk';
+import { HyperserveClient, HyperserveValidationError, HyperserveError } from '@hyperserve/hyperserve-js';
 
 try {
   await hyperserve.createVideo({ ... });
@@ -489,9 +489,9 @@ try {
 ## Package exports
 
 ```
-hyperserve-sdk              → server client, verifyWebhookSignature, all types, all errors
-hyperserve-sdk/browser      → putVideoToStorage (File | Blob), safe for browser bundles
-hyperserve-sdk/react-native → putVideoToStorage (URI string), safe for RN bundles
+hyperserve-js              → server client, verifyWebhookSignature, all types, all errors
+hyperserve-js/browser      → putVideoToStorage (File | Blob), safe for browser bundles
+hyperserve-js/react-native → putVideoToStorage (URI string), safe for RN bundles
 ```
 
 The `/browser` and `/react-native` exports contain no API key logic. The `react-native` condition in `package.json` exports ensures Metro bundler resolves the correct entry automatically.
@@ -501,7 +501,7 @@ The `/browser` and `/react-native` exports contain no API key logic. The `react-
 ## Package structure
 
 ```
-hyperserve-sdk/
+hyperserve-js/
 ├── src/
 │   ├── client.ts          # HyperserveClient — createVideo, completeUpload, uploadVideo, getVideo, delete*
 │   ├── browser.ts         # putVideoToStorage (File | Blob)

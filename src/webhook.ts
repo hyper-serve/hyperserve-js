@@ -20,7 +20,7 @@ const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enfor
  * JSON — any whitespace difference will invalidate the signature.
  *
  * @example
- * import { verifyWebhookSignature } from 'hyperserve-sdk';
+ * import { verifyWebhookSignature } from '@hyperserve/hyperserve-js';
  *
  * // Express (use express.raw, not express.json, so you get the raw body)
  * app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
