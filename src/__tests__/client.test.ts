@@ -41,6 +41,8 @@ const publicVideoResponse: VideoResult = {
 	id: "video-uuid",
 	status: "ready",
 	isPublic: true,
+	// Arbitrary user-supplied bag — keys must survive verbatim, including snake_case ones
+	customMetadata: { campaign: "launch", my_key: 1 },
 	resolutions: {
 		"1080p": {
 			id: "res-uuid",
@@ -96,8 +98,8 @@ describe("HyperserveClient — createVideo", () => {
 
 		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		const body = JSON.parse(init.body as string);
-		expect(body.thumbnail_timestamps_seconds).toEqual([5, 10]);
-		expect(body.custom_user_metadata).toEqual({ campaign: "launch" });
+		expect(body.thumbnailTimestampsSeconds).toEqual([5, 10]);
+		expect(body.customMetadata).toEqual({ campaign: "launch" });
 	});
 
 	it("omits optional fields when not provided", async () => {
@@ -112,8 +114,8 @@ describe("HyperserveClient — createVideo", () => {
 
 		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		const body = JSON.parse(init.body as string);
-		expect(body).not.toHaveProperty("thumbnail_timestamps_seconds");
-		expect(body).not.toHaveProperty("custom_user_metadata");
+		expect(body).not.toHaveProperty("thumbnailTimestampsSeconds");
+		expect(body).not.toHaveProperty("customMetadata");
 	});
 
 	it("returns the parsed response", async () => {
@@ -226,6 +228,14 @@ describe("HyperserveClient — getVideo", () => {
 
 		const result = await makeClient().getVideo("video-uuid");
 		expect(result).toEqual(publicVideoResponse);
+	});
+
+	it("passes customMetadata through verbatim without transforming keys", async () => {
+		mockFetch(200, publicVideoResponse);
+
+		const result = await makeClient().getVideo("video-uuid");
+		// The arbitrary user bag must not be camelCased — my_key stays my_key
+		expect(result.customMetadata).toEqual({ campaign: "launch", my_key: 1 });
 	});
 });
 

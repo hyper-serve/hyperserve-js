@@ -45,10 +45,10 @@ export class HyperserveClient {
 				resolutions: options.resolutions,
 				isPublic: options.isPublic,
 				...(options.thumbnailTimestampsSeconds !== undefined && {
-					thumbnail_timestamps_seconds: options.thumbnailTimestampsSeconds,
+					thumbnailTimestampsSeconds: options.thumbnailTimestampsSeconds,
 				}),
 				...(options.customMetadata !== undefined && {
-					custom_user_metadata: options.customMetadata,
+					customMetadata: options.customMetadata,
 				}),
 			},
 		});

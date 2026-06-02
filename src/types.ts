@@ -129,6 +129,8 @@ export interface VideoResult {
 	id: string;
 	status: VideoStatus;
 	isPublic: boolean;
+	/** Arbitrary key/value bag stored against the video at creation. Keys are returned verbatim. Null when none was set. */
+	customMetadata?: Record<string, unknown> | null;
 	resolutions: Partial<Record<VideoResolution, VideoResolutionResult>>;
 }
 
