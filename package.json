@@ -1,6 +1,6 @@
 {
 	"name": "@hyperserve/hyperserve-js",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "TypeScript SDK for the Hyperserve video infrastructure API",
 	"license": "MIT",
 	"author": "Ryan Trann <admin@hyperserve.io>",
