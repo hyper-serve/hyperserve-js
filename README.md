@@ -1,6 +1,6 @@
 # @hyperserve/hyperserve-js
 
-TypeScript SDK for the [Hyperserve](https://hyperserve.io?utm_source=github&utm_medium=readme&utm_campaign=hyperserve-js) video infrastructure API. Works in Node.js, browsers, and React Native.
+TypeScript SDK for the [Hyperserve](https://hyperserve.io?utm_source=readme&utm_medium=docs&utm_campaign=hyperserve-js) video infrastructure API. Works in Node.js, browsers, and React Native.
 
 ## Installation
 
