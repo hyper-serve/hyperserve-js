@@ -41,7 +41,6 @@ export class HyperserveClient {
 			retries: this.retries,
 			body: {
 				filename: options.filename,
-				fileSizeBytes: options.fileSizeBytes,
 				resolutions: options.resolutions,
 				isPublic: options.isPublic,
 				...(options.thumbnailTimestampsSeconds !== undefined && {
@@ -134,14 +133,15 @@ export class HyperserveClient {
 
 		const upload = await this.createVideo({
 			filename,
-			fileSizeBytes: normalized.size,
 			resolutions,
 			isPublic,
 			...(thumbnailTimestampsSeconds !== undefined && { thumbnailTimestampsSeconds }),
 			...(customMetadata !== undefined && { customMetadata }),
 		});
 
-		await putToStorage(upload.uploadUrl, upload.contentType, normalized.body);
+		await putToStorage(upload.uploadUrl, upload.contentType, normalized.body, {
+			contentLength: normalized.size,
+		});
 
 		return this.completeUpload(upload.id);
 	}

@@ -32,7 +32,6 @@ const hyperserve = new HyperserveClient({ apiKey: process.env.HYPERSERVE_API_KEY
 // In your API route or server action
 const upload = await hyperserve.createVideo({
   filename: 'promo.mp4',
-  fileSizeBytes: 10_485_760,
   resolutions: ['480p', '1080p'],
   isPublic: true,
 });
@@ -48,7 +47,7 @@ import { putVideoToStorage } from '@hyperserve/hyperserve-js/browser';
 
 const { videoId, uploadUrl, contentType } = await fetch('/api/create-upload', {
   method: 'POST',
-  body: JSON.stringify({ filename: file.name, fileSizeBytes: file.size }),
+  body: JSON.stringify({ filename: file.name }),
 }).then(r => r.json());
 
 await putVideoToStorage({
@@ -70,7 +69,7 @@ import { putVideoToStorage } from '@hyperserve/hyperserve-js/react-native';
 // asset from expo-image-picker, react-native-image-picker, etc.
 const { videoId, uploadUrl, contentType } = await fetch('https://your-api.com/create-upload', {
   method: 'POST',
-  body: JSON.stringify({ filename: asset.fileName, fileSizeBytes: asset.fileSize }),
+  body: JSON.stringify({ filename: asset.fileName }),
 }).then(r => r.json());
 
 await putVideoToStorage({
@@ -116,7 +115,6 @@ Creates a video record and returns a presigned upload URL.
 ```typescript
 const upload = await hyperserve.createVideo({
   filename: 'clip.mp4',          // required — extension determines content type
-  fileSizeBytes: 5_242_880,      // required
   resolutions: ['720p', '1080p'],// required — at least one
   isPublic: true,                // required
   thumbnailTimestampsSeconds: [5, 30, 60], // optional
@@ -187,15 +185,29 @@ await hyperserve.deleteResolution(resolutionId);
 Wraps `createVideo`, the storage PUT, and `completeUpload` into a single call. Intended for scripts and server-to-server use cases where the server holds the file. **Not suitable for the browser proxy pattern.**
 
 ```typescript
-import { readFileSync, statSync } from 'fs';
-
-const buffer = readFileSync('./promo.mp4');
-const { size } = statSync('./promo.mp4');
+import { readFileSync } from 'fs';
 
 const result = await hyperserve.uploadVideo({
-  file: buffer,                  // Blob | Buffer | ReadableStream
+  file: readFileSync('./promo.mp4'), // Blob | Buffer | ReadableStream
   filename: 'promo.mp4',
-  fileSizeBytes: size,           // required for ReadableStream, inferred for Blob/Buffer
+  resolutions: ['1080p'],
+  isPublic: false,
+});
+```
+
+For a `ReadableStream`, pass `fileSizeBytes` — the size cannot be inferred, and it is
+needed to set `Content-Length` on the storage PUT:
+
+```typescript
+import { createReadStream, statSync } from 'fs';
+import { Readable } from 'stream';
+
+const { size } = statSync('./promo.mp4');
+
+await hyperserve.uploadVideo({
+  file: Readable.toWeb(createReadStream('./promo.mp4')) as ReadableStream,
+  filename: 'promo.mp4',
+  fileSizeBytes: size,           // required for ReadableStream
   resolutions: ['1080p'],
   isPublic: false,
 });

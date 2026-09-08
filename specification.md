@@ -80,11 +80,10 @@ const hyperserve = new HyperserveClient({ apiKey: process.env.HYPERSERVE_API_KEY
 
 // In your API route / server action
 export async function createUploadHandler(req: Request) {
-  const { filename, fileSizeBytes } = await req.json();
+  const { filename } = await req.json();
 
   const upload = await hyperserve.createVideo({
     filename,
-    fileSizeBytes,
     resolutions: ['480p', '1080p'],
     isPublic: true,
   });
@@ -137,7 +136,7 @@ const asset = result.assets[0];
 // uploadUrl and contentType come from your own backend
 const { videoId, uploadUrl, contentType } = await fetch('https://your-api.com/create-upload', {
   method: 'POST',
-  body: JSON.stringify({ filename: asset.fileName, fileSizeBytes: asset.fileSize }),
+  body: JSON.stringify({ filename: asset.fileName }),
 }).then(r => r.json());
 
 await putVideoToStorage({
@@ -194,14 +193,15 @@ const { size } = statSync(filePath);
 
 const upload = await hyperserve.createVideo({
   filename: 'product-demo.mp4',
-  fileSizeBytes: size,
   resolutions: ['720p', '1080p'],
   isPublic: false,
 });
 
+// Content-Length is required — a stream body is otherwise sent chunked,
+// which storage rejects with 411 MissingContentLength.
 await fetch(upload.uploadUrl, {
   method: 'PUT',
-  headers: { 'Content-Type': upload.contentType },
+  headers: { 'Content-Type': upload.contentType, 'Content-Length': String(size) },
   body: createReadStream(filePath),
   duplex: 'half',
 });
@@ -216,15 +216,12 @@ const result = await hyperserve.completeUpload(upload.id);
 For non-browser environments where the server controls both the file and the Hyperserve API calls.
 
 ```typescript
-import { readFileSync, statSync } from 'fs';
+import { readFileSync } from 'fs';
 
 const buffer = readFileSync('./promo.mp4');
-const { size } = statSync('./promo.mp4');
-
 const result = await hyperserve.uploadVideo({
   file: buffer,
   filename: 'promo.mp4',
-  fileSizeBytes: size,
   resolutions: ['1080p'],
   isPublic: false,
 });
@@ -265,7 +262,6 @@ Creates the video record and returns the presigned upload URL and expected conte
 | Option | Type | Required | Notes |
 |---|---|---|---|
 | `filename` | `string` | Yes | Used server-side to derive content type from extension |
-| `fileSizeBytes` | `number` | Yes | |
 | `resolutions` | `VideoResolution[]` | Yes | At least one required |
 | `isPublic` | `boolean` | Yes | |
 | `thumbnailTimestampsSeconds` | `number[]` | No | |
@@ -315,7 +311,7 @@ Wraps `createVideo`, the storage PUT, and `completeUpload` into a single call. I
 |---|---|---|---|
 | `file` | `Blob \| Buffer \| ReadableStream` | Yes | |
 | `filename` | `string` | Yes | |
-| `fileSizeBytes` | `number` | Conditional | Required for `ReadableStream`. Inferred for `Blob`/`Buffer`. |
+| `fileSizeBytes` | `number` | Conditional | Required for `ReadableStream`, where it sets `Content-Length` on the storage PUT. Inferred and then ignored for `Blob`/`Buffer`, which carry their own length. Not sent to the API. |
 | `resolutions` | `VideoResolution[]` | Yes | |
 | `isPublic` | `boolean` | Yes | |
 | `thumbnailTimestampsSeconds` | `number[]` | No | |

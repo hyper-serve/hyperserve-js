@@ -88,6 +88,28 @@ describe("putToStorage — fetch path (no onProgress)", () => {
 		expect(init.duplex).toBeUndefined();
 	});
 
+	it("sets Content-Length for a ReadableStream body when contentLength is provided", async () => {
+		vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200 } as Response);
+
+		await putToStorage("https://s3.example.com/put", "video/mp4", new ReadableStream(), {
+			contentLength: 2048,
+		});
+
+		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+		expect((init.headers as Record<string, string>)["Content-Length"]).toBe("2048");
+	});
+
+	it("omits Content-Length for a Blob body — fetch derives it from the blob", async () => {
+		vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200 } as Response);
+
+		await putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			contentLength: 1,
+		});
+
+		const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+		expect(init.headers as Record<string, string>).not.toHaveProperty("Content-Length");
+	});
+
 	it("resolves on 200", async () => {
 		vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200 } as Response);
 		await expect(
@@ -133,24 +155,18 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 	});
 
 	it("opens PUT request with the correct URL", async () => {
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerLoad();
 		await promise;
 		expect(mockXhr.open).toHaveBeenCalledWith("PUT", "https://s3.example.com/put");
 	});
 
 	it("sets Content-Type header", async () => {
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/webm",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/webm", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerLoad();
 		await promise;
 		expect(mockXhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "video/webm");
@@ -158,12 +174,9 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 
 	it("does not call onProgress when lengthComputable is false", async () => {
 		const onProgress = vi.fn();
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
 			onProgress,
-		);
+		});
 
 		mockXhr.triggerUploadProgress(500_000, 1_000_000, false);
 		mockXhr.triggerLoad();
@@ -176,12 +189,9 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 
 	it("calls onProgress with computed percentage", async () => {
 		const onProgress = vi.fn();
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
 			onProgress,
-		);
+		});
 
 		mockXhr.triggerUploadProgress(500_000, 1_000_000);
 		mockXhr.triggerLoad();
@@ -192,12 +202,9 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 
 	it("calls onProgress(100) on successful load", async () => {
 		const onProgress = vi.fn();
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
 			onProgress,
-		);
+		});
 		mockXhr.triggerLoad();
 		await promise;
 		expect(onProgress).toHaveBeenLastCalledWith(100);
@@ -205,24 +212,18 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 
 	it("resolves when xhr load fires with 2xx status", async () => {
 		mockXhr.status = 200;
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerLoad();
 		await expect(promise).resolves.toBeUndefined();
 	});
 
 	it("rejects with HyperserveUploadError when load fires with non-2xx", async () => {
 		mockXhr.status = 403;
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerLoad();
 
 		const err = await promise.catch((e: unknown) => e);
@@ -231,24 +232,18 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 	});
 
 	it("rejects with HyperserveTimeoutError on xhr timeout", async () => {
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerTimeout();
 
 		await expect(promise).rejects.toBeInstanceOf(HyperserveTimeoutError);
 	});
 
 	it("rejects with HyperserveUploadError on xhr error", async () => {
-		const promise = putToStorage(
-			"https://s3.example.com/put",
-			"video/mp4",
-			new Blob(["x"]),
-			vi.fn(),
-		);
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", new Blob(["x"]), {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerError();
 
 		await expect(promise).rejects.toBeInstanceOf(HyperserveUploadError);
@@ -256,7 +251,9 @@ describe("putToStorage — XHR path (onProgress provided)", () => {
 
 	it("sends the blob body via xhr.send", async () => {
 		const blob = new Blob(["video bytes"]);
-		const promise = putToStorage("https://s3.example.com/put", "video/mp4", blob, vi.fn());
+		const promise = putToStorage("https://s3.example.com/put", "video/mp4", blob, {
+			onProgress: vi.fn(),
+		});
 		mockXhr.triggerLoad();
 		await promise;
 		expect(mockXhr.send).toHaveBeenCalledWith(blob);

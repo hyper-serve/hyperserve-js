@@ -30,7 +30,7 @@ import type { PutVideoToStorageRNOptions } from "./types.js";
  * @example
  * const { uploadUrl, contentType } = await fetch('https://your-api.com/create-upload', {
  *   method: 'POST',
- *   body: JSON.stringify({ filename: asset.fileName, fileSizeBytes: asset.fileSize }),
+ *   body: JSON.stringify({ filename: asset.fileName }),
  * }).then(r => r.json());
  *
  * await putVideoToStorage({ uploadUrl, contentType, uri: asset.uri, onProgress: (p) => setProgress(p) });
@@ -51,5 +51,7 @@ export async function putVideoToStorage(options: PutVideoToStorageRNOptions): Pr
 	}
 	const blob = await localResponse.blob();
 
-	return putToStorage(uploadUrl, contentType, blob, onProgress);
+	return putToStorage(uploadUrl, contentType, blob, {
+		...(onProgress !== undefined && { onProgress }),
+	});
 }
