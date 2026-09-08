@@ -311,7 +311,7 @@ Wraps `createVideo`, the storage PUT, and `completeUpload` into a single call. I
 |---|---|---|---|
 | `file` | `Blob \| Buffer \| ReadableStream` | Yes | |
 | `filename` | `string` | Yes | |
-| `fileSizeBytes` | `number` | Conditional | Required for `ReadableStream`, where it sets `Content-Length` on the storage PUT. Inferred and then ignored for `Blob`/`Buffer`, which carry their own length. Not sent to the API. |
+| `fileSizeBytes` | `number` | No | Only used for `ReadableStream`, where it sets `Content-Length` on the storage PUT, skips buffering, and lifts the 256 MiB cap. A size-less stream is buffered to measure it (~1x the file in memory). Ignored for `Blob`/`Buffer`, which carry their own length. Not sent to the API. |
 | `resolutions` | `VideoResolution[]` | Yes | |
 | `isPublic` | `boolean` | Yes | |
 | `thumbnailTimestampsSeconds` | `number[]` | No | |

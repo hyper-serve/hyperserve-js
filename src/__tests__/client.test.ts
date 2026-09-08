@@ -388,6 +388,42 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 		expect((putInit.headers as Record<string, string>)["Content-Length"]).toBe("4096");
 	});
 
+	it("uploads a ReadableStream with no fileSizeBytes", async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 201,
+				json: () => Promise.resolve(createVideoResponse),
+			} as unknown as Response)
+			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 201,
+				json: () => Promise.resolve(completeUploadResponse),
+			} as unknown as Response);
+
+		const stream = new ReadableStream({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode("video data"));
+				controller.close();
+			},
+		});
+
+		const result = await makeClient().uploadVideo({
+			file: stream,
+			filename: "clip.mp4",
+			resolutions: ["1080p"],
+			isPublic: true,
+		});
+
+		expect(result).toEqual(completeUploadResponse);
+
+		// Measured by buffering, then replayed — Content-Length comes from the measurement
+		const [, putInit] = vi.mocked(fetch).mock.calls[1] as [string, RequestInit];
+		expect((putInit.headers as Record<string, string>)["Content-Length"]).toBe("10");
+		expect(await new Response(putInit.body as ReadableStream).text()).toBe("video data");
+	});
+
 	it("throws if createVideo fails", async () => {
 		vi.mocked(fetch).mockResolvedValueOnce({
 			ok: false,

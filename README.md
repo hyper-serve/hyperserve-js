@@ -195,8 +195,10 @@ const result = await hyperserve.uploadVideo({
 });
 ```
 
-For a `ReadableStream`, pass `fileSizeBytes` — the size cannot be inferred, and it is
-needed to set `Content-Length` on the storage PUT:
+`fileSizeBytes` is never required. It is inferred from a `Blob` or `Buffer`, and a
+`ReadableStream` is read into memory to measure it — which costs roughly the file's
+own size in memory and is capped at 256 MiB. Pass it for a stream to skip buffering
+entirely, upload straight to storage, and lift the size ceiling:
 
 ```typescript
 import { createReadStream, statSync } from 'fs';
@@ -207,7 +209,7 @@ const { size } = statSync('./promo.mp4');
 await hyperserve.uploadVideo({
   file: Readable.toWeb(createReadStream('./promo.mp4')) as ReadableStream,
   filename: 'promo.mp4',
-  fileSizeBytes: size,           // required for ReadableStream
+  fileSizeBytes: size,           // optional — avoids buffering the file in memory
   resolutions: ['1080p'],
   isPublic: false,
 });

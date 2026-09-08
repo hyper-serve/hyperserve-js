@@ -129,7 +129,7 @@ export class HyperserveClient {
 		const { file, filename, resolutions, isPublic, thumbnailTimestampsSeconds, customMetadata } =
 			options;
 
-		const normalized = normalizeFile(file, filename, options.fileSizeBytes);
+		const normalized = await normalizeFile(file, filename, options.fileSizeBytes);
 
 		const upload = await this.createVideo({
 			filename,
