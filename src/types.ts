@@ -100,10 +100,11 @@ export interface UploadVideoOptions {
 	/** Filename including extension (e.g. "clip.mp4"). */
 	filename: string;
 	/**
-	 * Byte length of the file. Required when file is a ReadableStream (cannot be inferred);
-	 * inferred automatically for Blob/Buffer. Used to set Content-Length on the storage PUT —
-	 * a stream body would otherwise be sent chunked, which storage rejects with 411.
-	 * Not sent to the Hyperserve API.
+	 * Byte length of the file. Required when file is a ReadableStream, where it sets
+	 * Content-Length on the storage PUT — a stream body would otherwise be sent chunked,
+	 * which storage rejects with 411. Inferred and then ignored for Blob/Buffer, which
+	 * carry their own length; supplying it for those has no effect on the request.
+	 * Never sent to the Hyperserve API.
 	 */
 	fileSizeBytes?: number;
 	resolutions: [VideoResolution, ...VideoResolution[]];

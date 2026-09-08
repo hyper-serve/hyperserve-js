@@ -1,8 +1,9 @@
 /**
  * Normalizes the various accepted file input types into a { body, size } pair
- * suitable for use as a fetch/XHR request body. The size becomes the
- * Content-Length header on the storage PUT, which S3-compatible storage
- * requires — it rejects a chunked PUT with 411.
+ * suitable for use as a fetch/XHR request body. The size is only consumed for a
+ * ReadableStream body, where it becomes the Content-Length header on the storage
+ * PUT — S3-compatible storage rejects a chunked PUT with 411. Blob bodies carry
+ * their own length, so the size is ignored for them.
  *
  * Size inference rules:
  *   Blob / File    → blob.size
