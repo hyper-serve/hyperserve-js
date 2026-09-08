@@ -27,5 +27,7 @@ import type { PutVideoToStorageOptions } from "./types.js";
  * await fetch('/api/complete-upload', { method: 'POST', body: JSON.stringify({ videoId }) });
  */
 export async function putVideoToStorage(options: PutVideoToStorageOptions): Promise<void> {
-	return putToStorage(options.uploadUrl, options.contentType, options.file, options.onProgress);
+	return putToStorage(options.uploadUrl, options.contentType, options.file, {
+		...(options.onProgress !== undefined && { onProgress: options.onProgress }),
+	});
 }

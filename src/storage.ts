@@ -1,5 +1,16 @@
 import { HyperserveTimeoutError, HyperserveUploadError } from "./errors.js";
 
+export interface PutToStorageOptions {
+	/**
+	 * Byte length of the body. Only used for ReadableStream bodies, which are sent
+	 * with chunked transfer encoding unless Content-Length is set explicitly — and
+	 * S3-compatible storage rejects a chunked PUT with 411 MissingContentLength.
+	 * Blob bodies carry their own length, so this is ignored for them.
+	 */
+	contentLength?: number;
+	onProgress?: (percent: number) => void;
+}
+
 /**
  * PUT a file to a presigned S3 URL.
  * Used internally by uploadVideo (server) and exported as putVideoToStorage (browser).
@@ -11,8 +22,10 @@ export async function putToStorage(
 	uploadUrl: string,
 	contentType: string,
 	body: Blob | ReadableStream,
-	onProgress?: (percent: number) => void,
+	options: PutToStorageOptions = {},
 ): Promise<void> {
+	const { contentLength, onProgress } = options;
+
 	// XHR is used for progress reporting but does not support ReadableStream bodies.
 	// Fall back to fetch (no progress) when the body is a stream.
 	if (
@@ -22,19 +35,29 @@ export async function putToStorage(
 	) {
 		return putWithXhr(uploadUrl, contentType, body, onProgress);
 	}
-	return putWithFetch(uploadUrl, contentType, body);
+	return putWithFetch(uploadUrl, contentType, body, contentLength);
 }
 
 function putWithFetch(
 	uploadUrl: string,
 	contentType: string,
 	body: Blob | ReadableStream,
+	contentLength?: number,
 ): Promise<void> {
+	const isStream = body instanceof ReadableStream;
+
 	return fetch(uploadUrl, {
 		method: "PUT",
-		headers: { "Content-Type": contentType },
+		headers: {
+			"Content-Type": contentType,
+			// A stream body would otherwise go out chunked, which S3-compatible
+			// storage rejects with 411. Blob bodies get Content-Length from fetch.
+			...(isStream && contentLength !== undefined
+				? { "Content-Length": String(contentLength) }
+				: {}),
+		},
 		// duplex is required for ReadableStream bodies in some runtimes (Node 18)
-		...(body instanceof ReadableStream ? { duplex: "half" } : {}),
+		...(isStream ? { duplex: "half" } : {}),
 		body: body as BodyInit,
 	}).then((response) => {
 		if (!response.ok) {

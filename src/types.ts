@@ -63,8 +63,6 @@ export interface VerifyWebhookSignatureOptions {
 export interface CreateVideoOptions {
 	/** Original filename including extension (e.g. "promo.mp4"). Used server-side to derive content type. */
 	filename: string;
-	/** File size in bytes. */
-	fileSizeBytes: number;
 	/** At least one resolution is required. */
 	resolutions: [VideoResolution, ...VideoResolution[]];
 	/** Controls whether playback URLs are public or time-limited signed URLs. */
@@ -101,7 +99,12 @@ export interface UploadVideoOptions {
 	file: Blob | Buffer | ReadableStream;
 	/** Filename including extension (e.g. "clip.mp4"). */
 	filename: string;
-	/** Required when file is a ReadableStream (cannot be inferred). Inferred automatically for Blob/Buffer. */
+	/**
+	 * Byte length of the file. Required when file is a ReadableStream (cannot be inferred);
+	 * inferred automatically for Blob/Buffer. Used to set Content-Length on the storage PUT —
+	 * a stream body would otherwise be sent chunked, which storage rejects with 411.
+	 * Not sent to the Hyperserve API.
+	 */
 	fileSizeBytes?: number;
 	resolutions: [VideoResolution, ...VideoResolution[]];
 	isPublic: boolean;

@@ -68,7 +68,6 @@ describe("HyperserveClient — createVideo", () => {
 
 		await client.createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 1024,
 			resolutions: ["1080p"],
 			isPublic: true,
 		});
@@ -78,7 +77,6 @@ describe("HyperserveClient — createVideo", () => {
 		expect(init.method).toBe("POST");
 		expect(JSON.parse(init.body as string)).toEqual({
 			filename: "clip.mp4",
-			fileSizeBytes: 1024,
 			resolutions: ["1080p"],
 			isPublic: true,
 		});
@@ -89,7 +87,6 @@ describe("HyperserveClient — createVideo", () => {
 
 		await makeClient().createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 2048,
 			resolutions: ["720p"],
 			isPublic: false,
 			thumbnailTimestampsSeconds: [5, 10],
@@ -107,7 +104,6 @@ describe("HyperserveClient — createVideo", () => {
 
 		await makeClient().createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 512,
 			resolutions: ["480p"],
 			isPublic: true,
 		});
@@ -123,7 +119,6 @@ describe("HyperserveClient — createVideo", () => {
 
 		const result = await makeClient().createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 1024,
 			resolutions: ["1080p"],
 			isPublic: true,
 		});
@@ -137,7 +132,6 @@ describe("HyperserveClient — createVideo", () => {
 		await expect(
 			makeClient().createVideo({
 				filename: "clip.exe",
-				fileSizeBytes: 100,
 				resolutions: ["1080p"],
 				isPublic: true,
 			}),
@@ -341,7 +335,7 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 		);
 	});
 
-	it("infers fileSizeBytes from Buffer when not provided", async () => {
+	it("does not send fileSizeBytes to createVideo", async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
 				ok: true,
@@ -365,7 +359,33 @@ describe("HyperserveClient — uploadVideo (convenience)", () => {
 
 		const [, createInit] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
 		const createBody = JSON.parse(createInit.body as string);
-		expect(createBody.fileSizeBytes).toBe(buf.byteLength);
+		expect(createBody).not.toHaveProperty("fileSizeBytes");
+	});
+
+	it("sends Content-Length on the storage PUT for a ReadableStream file", async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 201,
+				json: () => Promise.resolve(createVideoResponse),
+			} as unknown as Response)
+			.mockResolvedValueOnce({ ok: true, status: 200 } as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 201,
+				json: () => Promise.resolve(completeUploadResponse),
+			} as unknown as Response);
+
+		await makeClient().uploadVideo({
+			file: new ReadableStream(),
+			filename: "clip.mp4",
+			fileSizeBytes: 4096,
+			resolutions: ["1080p"],
+			isPublic: true,
+		});
+
+		const [, putInit] = vi.mocked(fetch).mock.calls[1] as [string, RequestInit];
+		expect((putInit.headers as Record<string, string>)["Content-Length"]).toBe("4096");
 	});
 
 	it("throws if createVideo fails", async () => {
@@ -447,7 +467,6 @@ describe("HyperserveClient — baseUrl", () => {
 
 		await makeClient({ baseUrl: "https://custom.api.com/api/" }).createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 100,
 			resolutions: ["480p"],
 			isPublic: true,
 		});
@@ -461,7 +480,6 @@ describe("HyperserveClient — baseUrl", () => {
 
 		await makeClient({ baseUrl: "http://localhost:3001/api" }).createVideo({
 			filename: "clip.mp4",
-			fileSizeBytes: 100,
 			resolutions: ["480p"],
 			isPublic: true,
 		});

@@ -1,10 +1,12 @@
 /**
  * Normalizes the various accepted file input types into a { body, size } pair
- * suitable for use as a fetch/XHR request body.
+ * suitable for use as a fetch/XHR request body. The size becomes the
+ * Content-Length header on the storage PUT, which S3-compatible storage
+ * requires — it rejects a chunked PUT with 411.
  *
  * Size inference rules:
- *   Blob / File  → blob.size
- *   Buffer       → buffer.byteLength
+ *   Blob / File    → blob.size
+ *   Buffer         → buffer.byteLength
  *   ReadableStream → must be provided via fileSizeBytes
  */
 export interface NormalizedFile {
