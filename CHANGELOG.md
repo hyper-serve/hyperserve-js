@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/hyper-serve/hyperserve-js/compare/hyperserve-js-v0.1.1...hyperserve-js-v0.2.0) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* CreateVideoOptions.fileSizeBytes is removed. TypeScript callers passing it get an excess-property error. The runtime call is unaffected, since the API ignores the field.
+
+### Features
+
+* drop fileSizeBytes from createVideo, send Content-Length on stream uploads ([#3](https://github.com/hyper-serve/hyperserve-js/issues/3)) ([dd6f633](https://github.com/hyper-serve/hyperserve-js/commit/dd6f633377d1a58800403df64a8d4e2164875ac2))
+
 ## [0.1.1](https://github.com/hyper-serve/hyperserve-js/compare/hyperserve-js-v0.1.0...hyperserve-js-v0.1.1) (2026-06-02)
 
 
