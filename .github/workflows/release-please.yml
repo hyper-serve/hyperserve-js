@@ -3,6 +3,16 @@ name: Release Please
 # Runs on every push to main. Reads conventional commits and maintains
 # a release PR that accumulates changes, bumps the version in package.json,
 # and updates CHANGELOG.md. Merge the release PR when you're ready to ship.
+#
+# Bump rules while we're pre-1.0 (set in release-please-config.json):
+#   fix:      -> patch   0.1.1 -> 0.1.2
+#   feat:     -> patch   0.1.1 -> 0.1.2   (bump-patch-for-minor-pre-major)
+#   feat!:    -> minor   0.1.1 -> 0.2.0   (bump-minor-pre-major)
+# Drop both flags when we cut 1.0.0 to get standard semver.
+#
+# To force a specific version, put `Release-As: x.y.z` in a commit body on main:
+#   git commit --allow-empty -m "chore: release 0.1.2" -m "Release-As: 0.1.2"
+# The next run restages the release PR at that exact version.
 
 on:
   push:
