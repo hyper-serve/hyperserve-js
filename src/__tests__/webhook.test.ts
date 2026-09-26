@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyWebhookSignature } from "../webhook.js";
+import { parseWebhookPayload, verifyWebhookSignature } from "../webhook.js";
 
 const SECRET = "test-webhook-secret-abc123";
 const BODY = JSON.stringify({ event: "video.ready", videoId: "abc-123" });
@@ -169,5 +169,157 @@ describe("verifyWebhookSignature", () => {
 		const signature = await generateSignature(futureTimestamp, SECRET, BODY);
 
 		expect(await verifyWebhookSignature({ signature, secret: SECRET, body: BODY })).toBe(true);
+	});
+});
+
+describe("parseWebhookPayload", () => {
+	const SUCCESS_BODY = JSON.stringify({
+		webhookName: "my-webhook",
+		videoId: "vid-123",
+		event: "video-processing-success",
+		customMetadata: { orderId: "abc" },
+		data: {
+			id: "vid-123",
+			isPublic: true,
+			resolutions: {
+				"1080p": {
+					status: "ready",
+					videoUrl: "https://cdn.example/1080p.mp4",
+					thumbnailImageUrls: ["https://cdn.example/1080p_1.jpg"],
+				},
+			},
+		},
+	});
+
+	const FAIL_BODY = JSON.stringify({
+		webhookName: "my-webhook",
+		videoId: "vid-123",
+		event: "video-processing-fail",
+		customMetadata: null,
+		error: "Error processing video, contact support",
+	});
+
+	it("parses a video-processing-success payload", () => {
+		const payload = parseWebhookPayload(SUCCESS_BODY);
+
+		expect(payload?.event).toBe("video-processing-success");
+		expect(payload?.webhookName).toBe("my-webhook");
+		expect(payload?.videoId).toBe("vid-123");
+	});
+
+	it("narrows to the success payload on the event discriminant", () => {
+		const payload = parseWebhookPayload(SUCCESS_BODY);
+		if (payload?.event !== "video-processing-success") throw new Error("expected success");
+
+		// Type-level: `data` is only reachable after narrowing.
+		expect(payload.data.id).toBe("vid-123");
+		expect(payload.data.isPublic).toBe(true);
+		expect(payload.data.resolutions["1080p"]?.status).toBe("ready");
+		expect(payload.data.resolutions["1080p"]?.videoUrl).toBe("https://cdn.example/1080p.mp4");
+	});
+
+	it("narrows to the fail payload, which carries error and no data", () => {
+		const payload = parseWebhookPayload(FAIL_BODY);
+		if (payload?.event !== "video-processing-fail") throw new Error("expected fail");
+
+		expect(payload.error).toBe("Error processing video, contact support");
+		expect("data" in payload).toBe(false);
+	});
+
+	it("parses a private-video success payload, where resolution URLs are absent", () => {
+		const body = JSON.stringify({
+			webhookName: "my-webhook",
+			videoId: "vid-123",
+			event: "video-processing-success",
+			customMetadata: null,
+			data: {
+				id: "vid-123",
+				isPublic: false,
+				resolutions: { "720p": { status: "ready" } },
+			},
+		});
+
+		const payload = parseWebhookPayload(body);
+		if (payload?.event !== "video-processing-success") throw new Error("expected success");
+
+		expect(payload.data.resolutions["720p"]).toEqual({ status: "ready" });
+		expect(payload.data.resolutions["720p"]?.videoUrl).toBeUndefined();
+	});
+
+	it("preserves a null customMetadata rather than coercing it", () => {
+		const payload = parseWebhookPayload(FAIL_BODY);
+
+		expect(payload?.customMetadata).toBeNull();
+	});
+
+	it("passes unknown fields through untouched", () => {
+		const body = JSON.stringify({
+			webhookName: "my-webhook",
+			videoId: "vid-123",
+			event: "video-processing-fail",
+			customMetadata: null,
+			error: "boom",
+			futureField: "keep me",
+		});
+
+		const payload = parseWebhookPayload(body);
+
+		expect((payload as Record<string, unknown> | null)?.futureField).toBe("keep me");
+	});
+
+	it("returns null for a body that is not valid JSON", () => {
+		expect(parseWebhookPayload("not json")).toBeNull();
+	});
+
+	it("returns null for JSON that is not an object", () => {
+		expect(parseWebhookPayload('"a string"')).toBeNull();
+		expect(parseWebhookPayload("null")).toBeNull();
+		expect(parseWebhookPayload("[]")).toBeNull();
+	});
+
+	it("returns null for an unrecognized event", () => {
+		const body = JSON.stringify({
+			webhookName: "my-webhook",
+			videoId: "vid-123",
+			event: "video-processing-something-else",
+			customMetadata: null,
+		});
+
+		expect(parseWebhookPayload(body)).toBeNull();
+	});
+
+	it("returns null when webhookName or videoId is missing", () => {
+		expect(
+			parseWebhookPayload(
+				JSON.stringify({ videoId: "vid-123", event: "video-processing-fail", error: "boom" }),
+			),
+		).toBeNull();
+		expect(
+			parseWebhookPayload(
+				JSON.stringify({ webhookName: "w", event: "video-processing-fail", error: "boom" }),
+			),
+		).toBeNull();
+	});
+
+	it("returns null when a success payload has no data object", () => {
+		const body = JSON.stringify({
+			webhookName: "my-webhook",
+			videoId: "vid-123",
+			event: "video-processing-success",
+			customMetadata: null,
+		});
+
+		expect(parseWebhookPayload(body)).toBeNull();
+	});
+
+	it("returns null when a fail payload has no error string", () => {
+		const body = JSON.stringify({
+			webhookName: "my-webhook",
+			videoId: "vid-123",
+			event: "video-processing-fail",
+			customMetadata: null,
+		});
+
+		expect(parseWebhookPayload(body)).toBeNull();
 	});
 });

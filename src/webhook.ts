@@ -1,4 +1,4 @@
-import type { VerifyWebhookSignatureOptions } from "./types.js";
+import type { VerifyWebhookSignatureOptions, WebhookPayload } from "./types.js";
 
 const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enforcement
 
@@ -91,4 +91,76 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {
 		bytes[i / 2] = value;
 	}
 	return bytes;
+}
+
+/**
+ * Parses a verified webhook request body into a typed, discriminated payload.
+ *
+ * Returns null — never throws — when the body is not valid JSON or does not match a known
+ * Hyperserve webhook shape. A null result should be treated the same as a failed signature
+ * check: reject the request rather than guessing at its contents.
+ *
+ * Verify the signature FIRST. Parsing an unverified body tells you nothing about who sent it.
+ *
+ * Unknown fields are passed through untouched, so a payload gaining fields server-side does
+ * not break older SDK versions.
+ *
+ * @example
+ * import { parseWebhookPayload, verifyWebhookSignature } from '@hyperserve/hyperserve-js';
+ *
+ * const body = await request.text();
+ * const isValid = await verifyWebhookSignature({
+ *   signature: request.headers.get('x-hyperserve-signature') ?? '',
+ *   secret: process.env.HYPERSERVE_WEBHOOK_SECRET!,
+ *   body,
+ * });
+ * if (!isValid) return new Response(null, { status: 401 });
+ *
+ * const payload = parseWebhookPayload(body);
+ * if (payload === null) return new Response(null, { status: 400 });
+ *
+ * if (payload.event === 'video-processing-success') {
+ *   for (const [resolution, result] of Object.entries(payload.data.resolutions)) {
+ *     console.log(resolution, result.videoUrl); // videoUrl is absent for private videos
+ *   }
+ * } else {
+ *   console.error(payload.videoId, payload.error);
+ * }
+ */
+export function parseWebhookPayload(body: string): WebhookPayload | null {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(body);
+	} catch {
+		return null;
+	}
+
+	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+
+	const payload = parsed as Record<string, unknown>;
+
+	if (typeof payload.webhookName !== "string") return null;
+	if (typeof payload.videoId !== "string") return null;
+
+	if (payload.event === "video-processing-success") {
+		const data = payload.data;
+		if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
+
+		const { id, isPublic, resolutions } = data as Record<string, unknown>;
+		if (typeof id !== "string") return null;
+		if (typeof isPublic !== "boolean") return null;
+		if (typeof resolutions !== "object" || resolutions === null || Array.isArray(resolutions)) {
+			return null;
+		}
+
+		return payload as unknown as WebhookPayload;
+	}
+
+	if (payload.event === "video-processing-fail") {
+		if (typeof payload.error !== "string") return null;
+
+		return payload as unknown as WebhookPayload;
+	}
+
+	return null;
 }

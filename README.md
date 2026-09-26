@@ -222,9 +222,11 @@ Verifies the `x-hyperserve-signature` header on incoming webhook requests. Retur
 ```typescript
 import { verifyWebhookSignature } from '@hyperserve/hyperserve-js';
 
+// Use the RAW body — express.raw, not express.json. Re-serializing invalidates the signature.
 const isValid = await verifyWebhookSignature({
   signature: req.headers['x-hyperserve-signature'] ?? '',
   secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+  body: req.body.toString(),
 });
 if (!isValid) return res.status(401).end();
 ```
@@ -233,7 +235,79 @@ if (!isValid) return res.status(401).end();
 |---|---|---|---|---|
 | `signature` | `string` | Yes | — | Value of the `x-hyperserve-signature` header |
 | `secret` | `string` | Yes | — | Webhook signing secret from the Hyperserve dashboard |
+| `body` | `string` | Yes | — | The raw request body, exactly as received |
 | `toleranceMs` | `number` | No | `300000` | Max timestamp age in ms (default 5 min) |
+
+---
+
+### `parseWebhookPayload(body)`
+
+Parses a verified webhook body into a typed `WebhookPayload`, discriminated on `event`. Returns
+`null` — never throws — when the body is not valid JSON or not a recognized Hyperserve payload.
+Verify the signature first; treat `null` the same as a failed verification.
+
+```typescript
+import { parseWebhookPayload, verifyWebhookSignature } from '@hyperserve/hyperserve-js';
+
+const payload = parseWebhookPayload(rawBody);
+if (payload === null) return res.status(400).end();
+
+if (payload.event === 'video-processing-success') {
+  for (const [resolution, result] of Object.entries(payload.data.resolutions)) {
+    console.log(resolution, result.videoUrl); // absent for private videos
+  }
+} else {
+  console.error(payload.videoId, payload.error);
+}
+```
+
+Unknown fields are passed through untouched, so payloads gaining fields server-side will not
+break this SDK version.
+
+#### Payload shapes
+
+Both events share `webhookName`, `videoId`, `event`, and `customMetadata`
+(`Record<string, unknown> | null` — whatever you passed to `createVideo`).
+
+**`video-processing-success`** adds `data`:
+
+```jsonc
+{
+  "webhookName": "my-webhook",
+  "videoId": "6f1b…",
+  "event": "video-processing-success",
+  "customMetadata": { "orderId": "abc" },
+  "data": {
+    "id": "6f1b…",
+    "isPublic": true,
+    "resolutions": {
+      // only the resolutions you requested at createVideo
+      "1080p": {
+        "status": "ready",
+        // videoUrl and thumbnailImageUrls are omitted for private videos —
+        // call getVideo with { private: true } for signed URLs
+        "videoUrl": "https://cdn.hyperserve.io/…/1080p.mp4",
+        "thumbnailImageUrls": ["https://cdn.hyperserve.io/…/1080p_1.jpg"]
+      }
+    }
+  }
+}
+```
+
+**`video-processing-fail`** carries no `data` — it adds a human-readable `error` string:
+
+```jsonc
+{
+  "webhookName": "my-webhook",
+  "videoId": "6f1b…",
+  "event": "video-processing-fail",
+  "customMetadata": null,
+  "error": "Error processing video, contact support"
+}
+```
+
+A single failed rendition fails the whole video, so every resolution in a success payload has
+`status: "ready"`.
 
 ---
 
@@ -283,6 +357,11 @@ import type {
   VideoResult,
   VideoResolutionResult,
   VerifyWebhookSignatureOptions,
+  WebhookEvent,                // 'video-processing-success' | 'video-processing-fail'
+  WebhookPayload,              // discriminated union of the two payloads below
+  VideoProcessingSuccessPayload,
+  VideoProcessingFailPayload,
+  WebhookResolutionResult,
   PutVideoToStorageOptions,    // for @hyperserve/hyperserve-js/browser
   PutVideoToStorageRNOptions,  // for @hyperserve/hyperserve-js/react-native
 } from 'hyperserve-js';

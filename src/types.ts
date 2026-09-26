@@ -26,6 +26,60 @@ export interface HyperserveClientOptions {
 	retries?: number;
 }
 
+// --- webhook payloads ---
+
+/** Events Hyperserve delivers to your webhook endpoint. */
+export type WebhookEvent = "video-processing-success" | "video-processing-fail";
+
+/** One rendition inside a `video-processing-success` payload. */
+export interface WebhookResolutionResult {
+	/** Always "ready" in a success payload — a failed rendition fails the whole video. */
+	status: VideoStatus;
+	/** Public CDN URL. Absent when the video is private — generate a signed URL with `getVideo`. */
+	videoUrl?: string;
+	/** Public CDN URLs. Absent when the video is private, or when no thumbnails were requested. */
+	thumbnailImageUrls?: string[];
+}
+
+interface WebhookPayloadBase {
+	/** Name of the webhook in the Hyperserve dashboard that delivered this event. */
+	webhookName: string;
+	/** ID of the video this event is about. */
+	videoId: string;
+	/** Metadata supplied at `createVideo`, returned verbatim. Null when none was set. */
+	customMetadata: Record<string, unknown> | null;
+}
+
+/** Delivered when every requested resolution finished transcoding. */
+export interface VideoProcessingSuccessPayload extends WebhookPayloadBase {
+	event: "video-processing-success";
+	data: {
+		id: string;
+		isPublic: boolean;
+		/** Keyed by the resolutions requested at `createVideo` — not every `VideoResolution`. */
+		resolutions: Partial<Record<VideoResolution, WebhookResolutionResult>>;
+	};
+}
+
+/** Delivered when processing failed. Carries no `data` — the renditions do not exist. */
+export interface VideoProcessingFailPayload extends WebhookPayloadBase {
+	event: "video-processing-fail";
+	/** Human-readable failure reason. Not a stable machine-readable code. */
+	error: string;
+}
+
+/**
+ * A webhook request body. Discriminated on `event`:
+ *
+ * @example
+ * if (payload.event === 'video-processing-success') {
+ *   payload.data.resolutions; // narrowed
+ * } else {
+ *   payload.error;            // narrowed
+ * }
+ */
+export type WebhookPayload = VideoProcessingSuccessPayload | VideoProcessingFailPayload;
+
 // --- verifyWebhookSignature ---
 
 export interface VerifyWebhookSignatureOptions {

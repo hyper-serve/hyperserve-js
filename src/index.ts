@@ -17,9 +17,14 @@ export type {
 	PutVideoToStorageRNOptions,
 	UploadVideoOptions,
 	VerifyWebhookSignatureOptions,
+	VideoProcessingFailPayload,
+	VideoProcessingSuccessPayload,
 	VideoResolution,
 	VideoResolutionResult,
 	VideoResult,
 	VideoStatus,
+	WebhookEvent,
+	WebhookPayload,
+	WebhookResolutionResult,
 } from "./types.js";
-export { verifyWebhookSignature } from "./webhook.js";
+export { parseWebhookPayload, verifyWebhookSignature } from "./webhook.js";
