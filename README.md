@@ -263,8 +263,11 @@ Throws `HyperserveWebhookError` with a `reason`:
 | `invalid_signature` | Signature missing, malformed, wrong, or older than `toleranceMs` | `401` |
 | `invalid_payload` | Signed correctly, but not a recognized Hyperserve payload | `400` |
 
-The signature is always checked before the body is parsed. The payload is returned exactly as
-sent, so fields added server-side will not break this SDK version.
+The signature is always checked before the body is parsed. Parsing checks the fields needed to
+narrow on `event` (`webhookName`, `videoId`, `customMetadata`, and `error` or `data.id`,
+`data.isPublic`, `data.resolutions`). The entries inside `resolutions` are not checked
+field by field; they are trusted because the request is signed. The payload is returned exactly
+as sent, so fields added server-side will not break this SDK version.
 
 ---
 
@@ -391,7 +394,7 @@ import type {
   WebhookResolutionResult,
   PutVideoToStorageOptions,    // for @hyperserve/hyperserve-js/browser
   PutVideoToStorageRNOptions,  // for @hyperserve/hyperserve-js/react-native
-} from 'hyperserve-js';
+} from '@hyperserve/hyperserve-js';
 ```
 
 ---

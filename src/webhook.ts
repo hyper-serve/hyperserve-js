@@ -105,6 +105,10 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {
  * - reason "invalid_signature": bad or missing signature, or an expired timestamp (respond 401)
  * - reason "invalid_payload": signed correctly, but not a recognized payload (respond 400)
  *
+ * Validation checks the envelope — `event`, `webhookName`, `videoId`, `customMetadata`, and `error`
+ * or `data.id` / `data.isPublic` / `data.resolutions` — enough to narrow safely. Entries inside
+ * `resolutions` are only checked to be objects; their fields are trusted as signed.
+ *
  * The payload is returned exactly as sent — unknown fields are passed through, so fields added
  * server-side do not break older SDK versions.
  *
@@ -172,6 +176,7 @@ function isWebhookPayload(value: unknown): value is WebhookPayload {
 	if (!isObject(value)) return false;
 	if (typeof value.webhookName !== "string") return false;
 	if (typeof value.videoId !== "string") return false;
+	if (!isObject(value.customMetadata) && value.customMetadata !== null) return false;
 
 	if (value.event === "video-processing-success") {
 		const { data } = value;

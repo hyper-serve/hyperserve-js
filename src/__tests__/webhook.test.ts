@@ -3,7 +3,7 @@ import { HyperserveError, HyperserveWebhookError } from "../errors.js";
 import { unwrapWebhook, verifyWebhookSignature } from "../webhook.js";
 
 const SECRET = "test-webhook-secret-abc123";
-const BODY = JSON.stringify({ event: "video.ready", videoId: "abc-123" });
+const BODY = JSON.stringify({ event: "video-processing-fail", videoId: "abc-123" });
 
 /**
  * Generates a valid x-hyperserve-signature header value using the Web Crypto API,
@@ -96,7 +96,7 @@ describe("verifyWebhookSignature", () => {
 	it("returns false when the body has been tampered with", async () => {
 		vi.setSystemTime(1_000_000);
 		const signature = await generateSignature(1_000_000, SECRET, BODY);
-		const tamperedBody = JSON.stringify({ event: "video.ready", videoId: "evil-456" });
+		const tamperedBody = JSON.stringify({ event: "video-processing-fail", videoId: "evil-456" });
 
 		expect(await verifyWebhookSignature({ signature, secret: SECRET, body: tamperedBody })).toBe(
 			false,
@@ -374,6 +374,19 @@ describe("unwrapWebhook", () => {
 			"videoId",
 		])("rejects a payload whose %s is not a string", async (field) => {
 			await payloadRejection(JSON.stringify({ ...FAIL, [field]: 123 }));
+		});
+
+		it("rejects a payload missing customMetadata", async () => {
+			const { customMetadata: _customMetadata, ...noMetadata } = FAIL;
+			await payloadRejection(JSON.stringify(noMetadata));
+		});
+
+		it.each([
+			["a string", "abc"],
+			["a number", 1],
+			["an array", [1]],
+		])("rejects a payload whose customMetadata is %s", async (_label, customMetadata) => {
+			await payloadRejection(JSON.stringify({ ...FAIL, customMetadata }));
 		});
 
 		it("rejects a fail payload with no error", async () => {
