@@ -1,3 +1,4 @@
+import { HyperserveWebhookError } from "./errors.js";
 import type { VerifyWebhookSignatureOptions, WebhookPayload } from "./types.js";
 
 const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enforcement
@@ -94,73 +95,97 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {
 }
 
 /**
- * Parses a verified webhook request body into a typed, discriminated payload.
+ * Verifies an incoming webhook request and returns its typed payload.
  *
- * Returns null — never throws — when the body is not valid JSON or does not match a known
- * Hyperserve webhook shape. A null result should be treated the same as a failed signature
- * check: reject the request rather than guessing at its contents.
+ * Checks the x-hyperserve-signature header first (same rules as verifyWebhookSignature), then
+ * parses the body into a WebhookPayload discriminated on `event`. Narrow on `event` to reach
+ * `data` (success) or `error` (fail).
  *
- * Verify the signature FIRST. Parsing an unverified body tells you nothing about who sent it.
+ * Throws HyperserveWebhookError when the request cannot be trusted or understood:
+ * - reason "invalid_signature": bad or missing signature, or an expired timestamp (respond 401)
+ * - reason "invalid_payload": signed correctly, but not a recognized payload (respond 400)
  *
- * Unknown fields are passed through untouched, so a payload gaining fields server-side does
- * not break older SDK versions.
+ * The payload is returned exactly as sent — unknown fields are passed through, so fields added
+ * server-side do not break older SDK versions.
+ *
+ * IMPORTANT: pass the raw request body string exactly as received. Do not parse and re-serialize
+ * JSON — any whitespace difference will invalidate the signature.
  *
  * @example
- * import { parseWebhookPayload, verifyWebhookSignature } from '@hyperserve/hyperserve-js';
+ * import { HyperserveWebhookError, unwrapWebhook } from '@hyperserve/hyperserve-js';
  *
- * const body = await request.text();
- * const isValid = await verifyWebhookSignature({
- *   signature: request.headers.get('x-hyperserve-signature') ?? '',
- *   secret: process.env.HYPERSERVE_WEBHOOK_SECRET!,
- *   body,
- * });
- * if (!isValid) return new Response(null, { status: 401 });
+ * // Next.js App Router
+ * export async function POST(request: Request) {
+ *   try {
+ *     const payload = await unwrapWebhook({
+ *       signature: request.headers.get('x-hyperserve-signature') ?? '',
+ *       secret: process.env.HYPERSERVE_WEBHOOK_SECRET!,
+ *       body: await request.text(),
+ *     });
  *
- * const payload = parseWebhookPayload(body);
- * if (payload === null) return new Response(null, { status: 400 });
- *
- * if (payload.event === 'video-processing-success') {
- *   for (const [resolution, result] of Object.entries(payload.data.resolutions)) {
- *     console.log(resolution, result.videoUrl); // videoUrl is absent for private videos
+ *     if (payload.event === 'video-processing-success') {
+ *       console.log(payload.data.resolutions); // videoUrl is absent for private videos
+ *     } else {
+ *       console.error(payload.videoId, payload.error);
+ *     }
+ *     return new Response(null, { status: 200 });
+ *   } catch (err) {
+ *     if (err instanceof HyperserveWebhookError) {
+ *       return new Response(null, { status: err.reason === 'invalid_signature' ? 401 : 400 });
+ *     }
+ *     throw err;
  *   }
- * } else {
- *   console.error(payload.videoId, payload.error);
  * }
  */
-export function parseWebhookPayload(body: string): WebhookPayload | null {
+export async function unwrapWebhook(
+	options: VerifyWebhookSignatureOptions,
+): Promise<WebhookPayload> {
+	if (!(await verifyWebhookSignature(options))) {
+		throw new HyperserveWebhookError(
+			"Webhook signature verification failed: the signature is invalid, malformed, or expired",
+			"invalid_signature",
+		);
+	}
+
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(body);
+		parsed = JSON.parse(options.body);
 	} catch {
-		return null;
+		throw new HyperserveWebhookError("Webhook payload is not valid JSON", "invalid_payload");
 	}
 
-	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-
-	const payload = parsed as Record<string, unknown>;
-
-	if (typeof payload.webhookName !== "string") return null;
-	if (typeof payload.videoId !== "string") return null;
-
-	if (payload.event === "video-processing-success") {
-		const data = payload.data;
-		if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
-
-		const { id, isPublic, resolutions } = data as Record<string, unknown>;
-		if (typeof id !== "string") return null;
-		if (typeof isPublic !== "boolean") return null;
-		if (typeof resolutions !== "object" || resolutions === null || Array.isArray(resolutions)) {
-			return null;
-		}
-
-		return payload as unknown as WebhookPayload;
+	if (!isWebhookPayload(parsed)) {
+		throw new HyperserveWebhookError(
+			"Webhook payload is not a recognized Hyperserve webhook payload",
+			"invalid_payload",
+		);
 	}
 
-	if (payload.event === "video-processing-fail") {
-		if (typeof payload.error !== "string") return null;
+	return parsed;
+}
 
-		return payload as unknown as WebhookPayload;
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isWebhookPayload(value: unknown): value is WebhookPayload {
+	if (!isObject(value)) return false;
+	if (typeof value.webhookName !== "string") return false;
+	if (typeof value.videoId !== "string") return false;
+
+	if (value.event === "video-processing-success") {
+		const { data } = value;
+		return (
+			isObject(data) &&
+			typeof data.id === "string" &&
+			typeof data.isPublic === "boolean" &&
+			isObject(data.resolutions)
+		);
 	}
 
-	return null;
+	if (value.event === "video-processing-fail") {
+		return typeof value.error === "string";
+	}
+
+	return false;
 }

@@ -6,6 +6,7 @@ import {
 	HyperserveTimeoutError,
 	HyperserveUploadError,
 	HyperserveValidationError,
+	HyperserveWebhookError,
 } from "../errors.js";
 
 describe("HyperserveError", () => {
@@ -111,5 +112,21 @@ describe("instanceof across error hierarchy", () => {
 		const notFound = new HyperserveNotFoundError();
 		expect(validation).not.toBeInstanceOf(HyperserveNotFoundError);
 		expect(notFound).not.toBeInstanceOf(HyperserveValidationError);
+	});
+});
+
+describe("HyperserveWebhookError", () => {
+	it("is instanceof HyperserveError", () => {
+		const err = new HyperserveWebhookError("bad signature", "invalid_signature");
+		expect(err).toBeInstanceOf(HyperserveError);
+		expect(err).toBeInstanceOf(HyperserveWebhookError);
+	});
+
+	it("sets name, message, and reason, with no statusCode", () => {
+		const err = new HyperserveWebhookError("bad payload", "invalid_payload");
+		expect(err.name).toBe("HyperserveWebhookError");
+		expect(err.message).toBe("bad payload");
+		expect(err.reason).toBe("invalid_payload");
+		expect(err.statusCode).toBeUndefined();
 	});
 });

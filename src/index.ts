@@ -6,6 +6,7 @@ export {
 	HyperserveTimeoutError,
 	HyperserveUploadError,
 	HyperserveValidationError,
+	HyperserveWebhookError,
 } from "./errors.js";
 export type {
 	CompleteUploadResult,
@@ -27,4 +28,4 @@ export type {
 	WebhookPayload,
 	WebhookResolutionResult,
 } from "./types.js";
-export { parseWebhookPayload, verifyWebhookSignature } from "./webhook.js";
+export { unwrapWebhook, verifyWebhookSignature } from "./webhook.js";
