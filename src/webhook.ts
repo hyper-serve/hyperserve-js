@@ -1,4 +1,5 @@
-import type { VerifyWebhookSignatureOptions } from "./types.js";
+import { HyperserveWebhookError } from "./errors.js";
+import type { VerifyWebhookSignatureOptions, WebhookPayload } from "./types.js";
 
 const DEFAULT_TOLERANCE_MS = 300_000; // 5 minutes — matches server-side enforcement
 
@@ -91,4 +92,105 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | null {
 		bytes[i / 2] = value;
 	}
 	return bytes;
+}
+
+/**
+ * Verifies an incoming webhook request and returns its typed payload.
+ *
+ * Checks the x-hyperserve-signature header first (same rules as verifyWebhookSignature), then
+ * parses the body into a WebhookPayload discriminated on `event`. Narrow on `event` to reach
+ * `data` (success) or `error` (fail).
+ *
+ * Throws HyperserveWebhookError when the request cannot be trusted or understood:
+ * - reason "invalid_signature": bad or missing signature, or an expired timestamp (respond 401)
+ * - reason "invalid_payload": signed correctly, but not a recognized payload (respond 400)
+ *
+ * Validation checks the envelope — `event`, `webhookName`, `videoId`, `customMetadata`, and `error`
+ * or `data.id` / `data.isPublic` / `data.resolutions` — enough to narrow safely. Entries inside
+ * `resolutions` are only checked to be objects; their fields are trusted as signed.
+ *
+ * The payload is returned exactly as sent — unknown fields are passed through, so fields added
+ * server-side do not break older SDK versions.
+ *
+ * IMPORTANT: pass the raw request body string exactly as received. Do not parse and re-serialize
+ * JSON — any whitespace difference will invalidate the signature.
+ *
+ * @example
+ * import { HyperserveWebhookError, unwrapWebhook } from '@hyperserve/hyperserve-js';
+ *
+ * // Next.js App Router
+ * export async function POST(request: Request) {
+ *   try {
+ *     const payload = await unwrapWebhook({
+ *       signature: request.headers.get('x-hyperserve-signature') ?? '',
+ *       secret: process.env.HYPERSERVE_WEBHOOK_SECRET!,
+ *       body: await request.text(),
+ *     });
+ *
+ *     if (payload.event === 'video-processing-success') {
+ *       console.log(payload.data.resolutions); // videoUrl is absent for private videos
+ *     } else {
+ *       console.error(payload.videoId, payload.error);
+ *     }
+ *     return new Response(null, { status: 200 });
+ *   } catch (err) {
+ *     if (err instanceof HyperserveWebhookError) {
+ *       return new Response(null, { status: err.reason === 'invalid_signature' ? 401 : 400 });
+ *     }
+ *     throw err;
+ *   }
+ * }
+ */
+export async function unwrapWebhook(
+	options: VerifyWebhookSignatureOptions,
+): Promise<WebhookPayload> {
+	if (!(await verifyWebhookSignature(options))) {
+		throw new HyperserveWebhookError(
+			"Webhook signature verification failed: the signature is invalid, malformed, or expired",
+			"invalid_signature",
+		);
+	}
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(options.body);
+	} catch {
+		throw new HyperserveWebhookError("Webhook payload is not valid JSON", "invalid_payload");
+	}
+
+	if (!isWebhookPayload(parsed)) {
+		throw new HyperserveWebhookError(
+			"Webhook payload is not a recognized Hyperserve webhook payload",
+			"invalid_payload",
+		);
+	}
+
+	return parsed;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isWebhookPayload(value: unknown): value is WebhookPayload {
+	if (!isObject(value)) return false;
+	if (typeof value.webhookName !== "string") return false;
+	if (typeof value.videoId !== "string") return false;
+	if (!isObject(value.customMetadata) && value.customMetadata !== null) return false;
+
+	if (value.event === "video-processing-success") {
+		const { data } = value;
+		return (
+			isObject(data) &&
+			typeof data.id === "string" &&
+			typeof data.isPublic === "boolean" &&
+			isObject(data.resolutions)
+		);
+	}
+
+	if (value.event === "video-processing-fail") {
+		return typeof value.error === "string";
+	}
+
+	return false;
 }

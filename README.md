@@ -215,25 +215,126 @@ await hyperserve.uploadVideo({
 
 ---
 
-### `verifyWebhookSignature(options)`
+### `unwrapWebhook(options)`
 
-Verifies the `x-hyperserve-signature` header on incoming webhook requests. Returns `Promise<boolean>` — never throws.
+Verifies an incoming webhook request and returns its typed payload, discriminated on `event`.
+This is the recommended way to handle webhooks.
 
 ```typescript
-import { verifyWebhookSignature } from '@hyperserve/hyperserve-js';
+import { HyperserveWebhookError, unwrapWebhook } from '@hyperserve/hyperserve-js';
 
-const isValid = await verifyWebhookSignature({
-  signature: req.headers['x-hyperserve-signature'] ?? '',
-  secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+// Use the RAW body — express.raw, not express.json. Re-serializing invalidates the signature.
+app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const payload = await unwrapWebhook({
+      signature: req.headers['x-hyperserve-signature'] ?? '',
+      secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+      body: req.body.toString(),
+    });
+
+    if (payload.event === 'video-processing-success') {
+      for (const [resolution, result] of Object.entries(payload.data.resolutions)) {
+        console.log(resolution, result.videoUrl); // absent for private videos
+      }
+    } else {
+      console.error(payload.videoId, payload.error);
+    }
+    res.status(200).end();
+  } catch (err) {
+    if (err instanceof HyperserveWebhookError) {
+      return res.status(err.reason === 'invalid_signature' ? 401 : 400).end();
+    }
+    throw err;
+  }
 });
-if (!isValid) return res.status(401).end();
 ```
 
 | Option | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `signature` | `string` | Yes | — | Value of the `x-hyperserve-signature` header |
 | `secret` | `string` | Yes | — | Webhook signing secret from the Hyperserve dashboard |
+| `body` | `string` | Yes | — | The raw request body, exactly as received |
 | `toleranceMs` | `number` | No | `300000` | Max timestamp age in ms (default 5 min) |
+
+Throws `HyperserveWebhookError` with a `reason`:
+
+| `reason` | When | Suggested response |
+|---|---|---|
+| `invalid_signature` | Signature missing, malformed, wrong, or older than `toleranceMs` | `401` |
+| `invalid_payload` | Signed correctly, but not a recognized Hyperserve payload | `400` |
+
+The signature is always checked before the body is parsed. Parsing checks the fields needed to
+narrow on `event` (`webhookName`, `videoId`, `customMetadata`, and `error` or `data.id`,
+`data.isPublic`, `data.resolutions`). The entries inside `resolutions` are not checked
+field by field; they are trusted because the request is signed. The payload is returned exactly
+as sent, so fields added server-side will not break this SDK version.
+
+---
+
+### `verifyWebhookSignature(options)`
+
+Lower-level alternative to `unwrapWebhook`: verifies the `x-hyperserve-signature` header only,
+and leaves parsing to you. Takes the same options. Returns `Promise<boolean>` — never throws.
+
+```typescript
+import { verifyWebhookSignature, type WebhookPayload } from '@hyperserve/hyperserve-js';
+
+const isValid = await verifyWebhookSignature({
+  signature: req.headers['x-hyperserve-signature'] ?? '',
+  secret: process.env.HYPERSERVE_WEBHOOK_SECRET,
+  body: req.body.toString(),
+});
+if (!isValid) return res.status(401).end();
+
+const payload = JSON.parse(req.body.toString()) as WebhookPayload; // unvalidated
+```
+
+---
+
+### Webhook payloads
+
+Both events share `webhookName`, `videoId`, `event`, and `customMetadata`
+(`Record<string, unknown> | null` — whatever you passed to `createVideo`).
+
+**`video-processing-success`** adds `data`:
+
+```jsonc
+{
+  "webhookName": "my-webhook",
+  "videoId": "6f1b…",
+  "event": "video-processing-success",
+  "customMetadata": { "orderId": "abc" },
+  "data": {
+    "id": "6f1b…",
+    "isPublic": true,
+    "resolutions": {
+      // only the resolutions you requested at createVideo
+      "1080p": {
+        "status": "ready",
+        // videoUrl and thumbnailImageUrls are omitted for private videos —
+        // call getVideo with { private: true } for signed URLs
+        "videoUrl": "https://cdn.hyperserve.io/…/1080p.mp4",
+        "thumbnailImageUrls": ["https://cdn.hyperserve.io/…/1080p_1.jpg"]
+      }
+    }
+  }
+}
+```
+
+**`video-processing-fail`** carries no `data` — it adds a human-readable `error` string:
+
+```jsonc
+{
+  "webhookName": "my-webhook",
+  "videoId": "6f1b…",
+  "event": "video-processing-fail",
+  "customMetadata": null,
+  "error": "Error processing video, contact support"
+}
+```
+
+A single failed rendition fails the whole video, so every resolution in a success payload has
+`status: "ready"`.
 
 ---
 
@@ -249,6 +350,7 @@ import {
   HyperserveNotFoundError,
   HyperserveUploadError,
   HyperserveTimeoutError,
+  HyperserveWebhookError,
 } from '@hyperserve/hyperserve-js';
 
 try {
@@ -261,6 +363,8 @@ try {
     // 404
   } else if (err instanceof HyperserveTimeoutError) {
     // request exceeded timeoutMs
+  } else if (err instanceof HyperserveWebhookError) {
+    // unwrapWebhook only — err.reason is 'invalid_signature' or 'invalid_payload'
   } else if (err instanceof HyperserveError) {
     // any other SDK error
   }
@@ -283,9 +387,14 @@ import type {
   VideoResult,
   VideoResolutionResult,
   VerifyWebhookSignatureOptions,
+  WebhookEvent,                // 'video-processing-success' | 'video-processing-fail'
+  WebhookPayload,              // discriminated union of the two payloads below
+  VideoProcessingSuccessPayload,
+  VideoProcessingFailPayload,
+  WebhookResolutionResult,
   PutVideoToStorageOptions,    // for @hyperserve/hyperserve-js/browser
   PutVideoToStorageRNOptions,  // for @hyperserve/hyperserve-js/react-native
-} from 'hyperserve-js';
+} from '@hyperserve/hyperserve-js';
 ```
 
 ---

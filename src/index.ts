@@ -6,6 +6,7 @@ export {
 	HyperserveTimeoutError,
 	HyperserveUploadError,
 	HyperserveValidationError,
+	HyperserveWebhookError,
 } from "./errors.js";
 export type {
 	CompleteUploadResult,
@@ -17,9 +18,14 @@ export type {
 	PutVideoToStorageRNOptions,
 	UploadVideoOptions,
 	VerifyWebhookSignatureOptions,
+	VideoProcessingFailPayload,
+	VideoProcessingSuccessPayload,
 	VideoResolution,
 	VideoResolutionResult,
 	VideoResult,
 	VideoStatus,
+	WebhookEvent,
+	WebhookPayload,
+	WebhookResolutionResult,
 } from "./types.js";
-export { verifyWebhookSignature } from "./webhook.js";
+export { unwrapWebhook, verifyWebhookSignature } from "./webhook.js";

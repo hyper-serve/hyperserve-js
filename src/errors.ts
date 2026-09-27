@@ -76,3 +76,20 @@ export class HyperserveTimeoutError extends HyperserveError {
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }
+
+/**
+ * An incoming webhook could not be trusted or understood. Thrown by unwrapWebhook.
+ *
+ * `reason` is "invalid_signature" when the request failed verification (respond 401), or
+ * "invalid_payload" when it was signed correctly but is not a recognized payload (respond 400).
+ */
+export class HyperserveWebhookError extends HyperserveError {
+	constructor(
+		message: string,
+		public readonly reason: "invalid_signature" | "invalid_payload",
+	) {
+		super(message);
+		this.name = "HyperserveWebhookError";
+		Object.setPrototypeOf(this, new.target.prototype);
+	}
+}
