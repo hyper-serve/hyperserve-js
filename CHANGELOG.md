@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/hyper-serve/hyperserve-js/compare/hyperserve-js-v0.2.0...hyperserve-js-v0.2.1) (2026-09-27)
+
+
+### Features
+
+* type webhook payloads and add unwrapWebhook ([#7](https://github.com/hyper-serve/hyperserve-js/issues/7)) ([551c108](https://github.com/hyper-serve/hyperserve-js/commit/551c1088f7fc5b71675af6e8f8b16d4db77b02f2))
+
 ## [0.2.0](https://github.com/hyper-serve/hyperserve-js/compare/hyperserve-js-v0.1.1...hyperserve-js-v0.2.0) (2026-09-09)
 
 
