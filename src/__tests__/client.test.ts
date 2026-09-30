@@ -488,3 +488,91 @@ describe("HyperserveClient — baseUrl", () => {
 		expect(url).toBe("http://localhost:3001/api/video");
 	});
 });
+
+describe("HyperserveClient: listVideos", () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn());
+	});
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const list = {
+		data: [
+			{
+				id: "v1",
+				fileName: "promo.mp4",
+				createdAt: "2026-09-27T10:00:00Z",
+				status: "ready",
+				isPublic: true,
+				durationSeconds: 42,
+				width: 1920,
+				height: 1080,
+				previewThumbnailUrl: "https://cdn.example.com/u/v1/preview.jpg",
+			},
+		],
+		total: 1,
+		page: 2,
+		limit: 10,
+	};
+
+	it("calls GET /video with the filters as query params and the API key", async () => {
+		mockFetch(200, list);
+		await makeClient().listVideos({ page: 2, limit: 10, visibility: "public", search: "promo" });
+
+		const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+		const parsed = new URL(url);
+		expect(parsed.pathname).toBe("/api/video");
+		expect(Object.fromEntries(parsed.searchParams)).toEqual({
+			page: "2",
+			limit: "10",
+			visibility: "public",
+			search: "promo",
+		});
+		expect(init.headers).toEqual(expect.objectContaining({ "X-API-KEY": API_KEY }));
+	});
+
+	it("returns the server's response unchanged", async () => {
+		mockFetch(200, list);
+		await expect(makeClient().listVideos()).resolves.toEqual(list);
+	});
+
+	it("omits unset filters rather than sending 'undefined'", async () => {
+		mockFetch(200, { data: [], total: 0, page: 1, limit: 20 });
+		await makeClient().listVideos();
+
+		const [url] = vi.mocked(fetch).mock.calls[0] as [string];
+		expect(new URL(url).search).toBe("");
+	});
+});
+
+describe("HyperserveClient: getVideoStatus", () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn());
+	});
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("calls GET /video/:id/status and returns status per resolution", async () => {
+		const status = {
+			id: "v1",
+			fileName: "promo.mp4",
+			status: "processing",
+			isPublic: true,
+			resolutions: { "720p": { status: "ready" }, "1080p": { status: "processing" } },
+		};
+		mockFetch(200, status);
+
+		await expect(makeClient().getVideoStatus("v1")).resolves.toEqual(status);
+		const [url] = vi.mocked(fetch).mock.calls[0] as [string];
+		expect(url).toBe(`${BASE}/api/video/v1/status`);
+	});
+
+	it("throws HyperserveNotFoundError on 404", async () => {
+		mockFetch(404, { message: "Error retrieving video, not found" });
+		await expect(makeClient().getVideoStatus("missing")).rejects.toBeInstanceOf(
+			HyperserveNotFoundError,
+		);
+	});
+});

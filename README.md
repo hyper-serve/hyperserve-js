@@ -160,6 +160,40 @@ video.resolutions['1080p']?.thumbnailImageUrls // array of thumbnail URLs
 
 ---
 
+### Listing your videos
+
+`listVideos(options?)` lists your videos, newest first. All options are optional.
+
+```typescript
+const result = await hyperserve.listVideos({
+  page: 1,                 // defaults to 1
+  limit: 20,                // defaults to 20, max 100
+  search: 'promo',
+  status: 'ready',
+  visibility: 'public',     // 'public' | 'private'
+});
+
+result.data    // ListedVideo[]
+result.total   // total matching videos, across all pages
+result.page
+result.limit
+```
+
+`getVideoStatus(videoId)` returns just the processing status per resolution, with no
+playback URLs, so it is cheap to poll while waiting for transcoding to finish.
+
+```typescript
+async function waitUntilReady(videoId: string) {
+  while (true) {
+    const status = await hyperserve.getVideoStatus(videoId);
+    if (status.status === 'ready' || status.status === 'fail') return status;
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+}
+```
+
+---
+
 ### `deleteVideo(videoId)`
 
 Deletes a video and all associated resolutions and thumbnails.
@@ -386,6 +420,10 @@ import type {
   CompleteUploadResult,
   VideoResult,
   VideoResolutionResult,
+  ListVideosOptions,
+  ListVideosResult,
+  ListedVideo,
+  VideoStatusResult,
   VerifyWebhookSignatureOptions,
   WebhookEvent,                // 'video-processing-success' | 'video-processing-fail'
   WebhookPayload,              // discriminated union of the two payloads below
