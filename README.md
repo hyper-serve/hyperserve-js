@@ -186,7 +186,7 @@ playback URLs, so it is cheap to poll while waiting for transcoding to finish.
 async function waitUntilReady(videoId: string) {
   while (true) {
     const status = await hyperserve.getVideoStatus(videoId);
-    if (status.status !== 'processing') return status;
+    if (status.status === 'ready' || status.status === 'fail') return status;
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 }
