@@ -192,6 +192,48 @@ export interface VideoResult {
 	resolutions: Partial<Record<VideoResolution, VideoResolutionResult>>;
 }
 
+// --- listVideos ---
+
+export interface ListVideosOptions {
+	/** Defaults to 1. */
+	page?: number;
+	/** Defaults to 20, max 100. */
+	limit?: number;
+	search?: string;
+	status?: VideoStatus;
+	visibility?: "public" | "private";
+}
+
+export interface ListedVideo {
+	id: string;
+	fileName: string;
+	createdAt: string;
+	status: VideoStatus;
+	isPublic: boolean;
+	durationSeconds: number | null;
+	width: number | null;
+	height: number | null;
+	/** Public URL for public videos; a signed URL valid for 1 hour for private ones. */
+	previewThumbnailUrl: string;
+}
+
+export interface ListVideosResult {
+	data: ListedVideo[];
+	total: number;
+	page: number;
+	limit: number;
+}
+
+// --- getVideoStatus ---
+
+export interface VideoStatusResult {
+	id: string;
+	fileName: string;
+	status: VideoStatus;
+	isPublic: boolean;
+	resolutions: Partial<Record<VideoResolution, { status: VideoStatus }>>;
+}
+
 // --- putVideoToStorage (browser) ---
 
 export interface PutVideoToStorageOptions {

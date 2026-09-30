@@ -7,8 +7,11 @@ import type {
 	CreateVideoResult,
 	GetVideoOptions,
 	HyperserveClientOptions,
+	ListVideosOptions,
+	ListVideosResult,
 	UploadVideoOptions,
 	VideoResult,
+	VideoStatusResult,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.hyperserve.io/api";
@@ -86,6 +89,40 @@ export class HyperserveClient {
 		return apiRequest<VideoResult>({
 			method: "GET",
 			url,
+			apiKey: this.apiKey,
+			timeoutMs: this.timeoutMs,
+			retries: this.retries,
+		});
+	}
+
+	/**
+	 * Lists your videos, newest first. Filters are optional.
+	 * Thumbnail URLs are public for public videos and signed (1 hour) for private ones.
+	 */
+	async listVideos(options: ListVideosOptions = {}): Promise<ListVideosResult> {
+		const params = new URLSearchParams();
+		for (const [key, value] of Object.entries(options)) {
+			if (value !== undefined) params.set(key, String(value));
+		}
+		const query = params.toString();
+
+		return apiRequest<ListVideosResult>({
+			method: "GET",
+			url: `${this.baseUrl}/video${query === "" ? "" : `?${query}`}`,
+			apiKey: this.apiKey,
+			timeoutMs: this.timeoutMs,
+			retries: this.retries,
+		});
+	}
+
+	/**
+	 * Returns a video's processing status per resolution. Unlike getVideo it returns
+	 * no playback URLs and is not counted as playback, so it suits polling.
+	 */
+	async getVideoStatus(videoId: string): Promise<VideoStatusResult> {
+		return apiRequest<VideoStatusResult>({
+			method: "GET",
+			url: `${this.baseUrl}/video/${videoId}/status`,
 			apiKey: this.apiKey,
 			timeoutMs: this.timeoutMs,
 			retries: this.retries,
